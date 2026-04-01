@@ -77,7 +77,7 @@ export function PdfPageCanvas({
           return;
         }
 
-        const viewport = loadedPage.getViewport({scale: 1.5});
+        const viewport = loadedPage.getViewport({scale: 2});
         canvas.width = viewport.width;
         canvas.height = viewport.height;
 
