@@ -25,7 +25,9 @@ export default function Home() {
               <strong>{session.title}</strong>
               <span>ID: {session.id}</span>
               <span>Page: {session.currentPage + 1}</span>
-              <span>{new Date(session.createdAt).toLocaleString()}</span>
+              <span>
+                {new Date(session.createdAt).toISOString().slice(0, 10)}
+              </span>
             </Link>
           ))}
         </div>
