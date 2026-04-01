@@ -1,8 +1,12 @@
-import type { NextConfig } from "next";
+import {createVanillaExtractPlugin} from '@vanilla-extract/next-plugin';
+import type {NextConfig} from 'next';
+
+const withVanillaExtract = createVanillaExtractPlugin({
+  unstable_turbopack: {mode: 'on'},
+});
 
 const nextConfig: NextConfig = {
-  /* config options here */
   reactCompiler: true,
 };
 
-export default nextConfig;
+export default withVanillaExtract(nextConfig);
