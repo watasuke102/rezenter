@@ -18,7 +18,6 @@ function formatMs(ms: number) {
 
 export function PresenterScreen({sessionId}: Props) {
   const [session, setSession] = useState<ClientSession | null>(null);
-  const [now, setNow] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,20 +47,12 @@ export function PresenterScreen({sessionId}: Props) {
     };
   }, [sessionId]);
 
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 500);
-    return () => window.clearInterval(id);
-  }, []);
-
   const elapsedMs = useMemo(() => {
     if (!session) {
       return 0;
     }
-    if (!session.timerRunning || !session.timerStartedAt) {
-      return session.timerElapsedMs;
-    }
-    return session.timerElapsedMs + (now - session.timerStartedAt);
-  }, [now, session]);
+    return session.timerElapsedMs;
+  }, [session]);
 
   const currentNote = useMemo(() => {
     if (!session) {
