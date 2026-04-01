@@ -28,5 +28,5 @@ export type SessionWithNotes = SessionRecord & {
 
 export type SessionSummary = Pick<
   SessionRecord,
-  'id' | 'title' | 'sourceType' | 'createdAt' | 'currentPage'
+  'id' | 'title' | 'sourceType' | 'createdAt' | 'currentPage' | 'totalPages'
 >;

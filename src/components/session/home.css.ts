@@ -136,3 +136,25 @@ export const sessionItem = style({
   display: 'grid',
   gap: 5,
 });
+
+export const sessionLink = style({
+  display: 'grid',
+  gap: 5,
+});
+
+export const sessionActions = style({
+  marginTop: 8,
+  display: 'flex',
+  justifyContent: 'flex-end',
+});
+
+export const deleteButton = style({
+  border: '1px solid #6d2e3d',
+  borderRadius: 2,
+  background: '#2a131b',
+  color: '#ffd7df',
+  padding: '6px 10px',
+  fontSize: 13,
+  lineHeight: 1,
+  cursor: 'pointer',
+});

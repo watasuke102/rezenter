@@ -19,6 +19,7 @@ export interface SessionRepository {
   list(): SessionSummary[];
   create(input: CreateSessionInput): SessionRecord;
   findById(sessionId: string): SessionWithNotes | null;
+  delete(sessionId: string): boolean;
   replaceNotes(sessionId: string, notes: NoteEntry[]): void;
   nextPage(sessionId: string): SessionRecord | null;
   prevPage(sessionId: string): SessionRecord | null;

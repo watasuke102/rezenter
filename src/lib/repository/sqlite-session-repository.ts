@@ -76,14 +76,19 @@ export class SqliteSessionRepository implements SessionRepository {
   list(): SessionSummary[] {
     const rows = this.db
       .prepare(
-        `SELECT id, title, source_type, created_at, current_page
+        `SELECT id, title, source_type, created_at, current_page, total_pages
          FROM sessions
          ORDER BY created_at DESC`,
       )
       .all() as Array<
       Pick<
         SessionRow,
-        'id' | 'title' | 'source_type' | 'created_at' | 'current_page'
+        | 'id'
+        | 'title'
+        | 'source_type'
+        | 'created_at'
+        | 'current_page'
+        | 'total_pages'
       >
     >;
 
@@ -93,6 +98,7 @@ export class SqliteSessionRepository implements SessionRepository {
       sourceType: row.source_type as SessionSummary['sourceType'],
       createdAt: row.created_at,
       currentPage: row.current_page,
+      totalPages: row.total_pages,
     }));
   }
 
@@ -149,6 +155,13 @@ export class SqliteSessionRepository implements SessionRepository {
       timerElapsedMs: computeElapsed(row, Date.now()),
       notes,
     };
+  }
+
+  delete(sessionId: string): boolean {
+    const result = this.db
+      .prepare(`DELETE FROM sessions WHERE id = ?`)
+      .run(sessionId);
+    return result.changes > 0;
   }
 
   replaceNotes(sessionId: string, notes: NoteEntry[]) {

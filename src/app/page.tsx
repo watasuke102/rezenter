@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import {CreateSessionForm} from '@/components/session/CreateSessionForm';
+import {SessionList} from '@/components/session/SessionList';
 import * as styles from '@/components/session/home.css';
 import {getSessionRepository} from '@/lib/repository';
 
@@ -14,23 +14,7 @@ export default function Home() {
 
       <section className={styles.panel}>
         <h2>セッション一覧</h2>
-        <div className={styles.sessions}>
-          {sessions.length === 0 ? <p>まだセッションがありません。</p> : null}
-          {sessions.map(session => (
-            <Link
-              key={session.id}
-              href={`/session/${session.id}`}
-              className={styles.sessionItem}
-            >
-              <strong>{session.title}</strong>
-              <span>ID: {session.id}</span>
-              <span>Page: {session.currentPage + 1}</span>
-              <span>
-                {new Date(session.createdAt).toISOString().slice(0, 10)}
-              </span>
-            </Link>
-          ))}
-        </div>
+        <SessionList sessions={sessions} />
       </section>
     </main>
   );
