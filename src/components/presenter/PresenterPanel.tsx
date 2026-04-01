@@ -7,6 +7,7 @@ type Props = {
   pdfSrc: string;
   currentPage: number;
   nextPage: number;
+  totalPagesText: string;
   timerText: string;
   timerRunning: boolean;
   noteText: string;
@@ -20,6 +21,7 @@ export function PresenterPanel({
   pdfSrc,
   currentPage,
   nextPage,
+  totalPagesText,
   timerText,
   timerRunning,
   noteText,
@@ -30,26 +32,37 @@ export function PresenterPanel({
 }: Props) {
   return (
     <main className={styles.page}>
-      <section className={styles.slides}>
-        <div className={styles.section}>
-          <h2>Current</h2>
-          <PdfPageCanvas src={pdfSrc} page={currentPage} />
+      <section className={styles.left}>
+        <div className={styles.previewSection}>
+          <h2 className={styles.sectionTitle}>Current</h2>
+          <PdfPageCanvas
+            src={pdfSrc}
+            page={currentPage}
+            className={styles.currentPreview}
+          />
         </div>
-        <div className={styles.section}>
-          <h2>Next</h2>
-          <PdfPageCanvas src={pdfSrc} page={nextPage} />
-        </div>
-      </section>
-
-      <section className={styles.panel}>
-        <div className={styles.timer}>{timerText}</div>
-        <div className={styles.controls}>
+        <div className={styles.pageNav}>
           <button type='button' className={styles.button} onClick={onPrev}>
             Prev
           </button>
+          <span className={styles.pageInfo}>{totalPagesText}</span>
           <button type='button' className={styles.button} onClick={onNext}>
             Next
           </button>
+        </div>
+        <div className={styles.previewSection}>
+          <h2 className={styles.sectionTitle}>Next</h2>
+          <PdfPageCanvas
+            src={pdfSrc}
+            page={nextPage}
+            className={styles.nextPreview}
+          />
+        </div>
+      </section>
+
+      <section className={styles.right}>
+        <div className={styles.timer}>{timerText}</div>
+        <div className={styles.controls}>
           <button
             type='button'
             className={`${styles.button} ${styles.secondary}`}
@@ -66,7 +79,7 @@ export function PresenterPanel({
           </button>
         </div>
         <div>
-          <h3>Note</h3>
+          <h3 className={styles.subTitle}>Note</h3>
           <p className={styles.notes}>{noteText || 'No note for this page.'}</p>
         </div>
       </section>

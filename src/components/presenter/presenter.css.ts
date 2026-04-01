@@ -1,39 +1,83 @@
 import {style} from '@vanilla-extract/css';
 
 export const page = style({
-  minHeight: '100dvh',
+  height: '100dvh',
   padding: 16,
   background: '#0f1315',
   color: '#e8ecef',
   display: 'grid',
-  gridTemplateRows: '1fr auto',
+  gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
   gap: 16,
-});
-
-export const slides = style({
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 12,
-  minHeight: 0,
+  overflow: 'hidden',
   '@media': {
-    '(max-width: 900px)': {
+    '(max-width: 980px)': {
       gridTemplateColumns: '1fr',
+      gridTemplateRows: 'minmax(0, 1fr) minmax(0, 1fr)',
     },
   },
 });
 
-export const section = style({
+export const left = style({
   display: 'grid',
-  gap: 10,
+  gridTemplateRows: 'minmax(0, 1fr) auto minmax(0, 1fr)',
+  gap: 12,
+  minHeight: 0,
+  overflow: 'hidden',
 });
 
-export const panel = style({
+export const previewSection = style({
+  display: 'grid',
+  gridTemplateRows: 'auto minmax(0, 1fr)',
+  gap: 10,
+  minHeight: 0,
+  overflow: 'hidden',
+});
+
+export const sectionTitle = style({
+  margin: 0,
+  lineHeight: 1.2,
+});
+
+export const currentPreview = style({
+  minHeight: 0,
+  overflow: 'hidden',
+});
+
+export const nextPreview = style({
+  minHeight: 0,
+  overflow: 'hidden',
+});
+
+export const pageNav = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 10,
+  paddingBlock: 4,
+});
+
+export const pageInfo = style({
+  minWidth: 110,
+  textAlign: 'center',
+  color: '#d9e2ee',
+  fontVariantNumeric: 'tabular-nums',
+});
+
+export const right = style({
   border: '1px solid #35424c',
   borderRadius: 2,
   background: '#141b23',
   padding: 12,
   display: 'grid',
+  gridTemplateRows: 'auto auto minmax(0, 1fr)',
   gap: 10,
+  minHeight: 0,
+  overflow: 'hidden',
+});
+
+export const subTitle = style({
+  margin: 0,
+  lineHeight: 1.2,
 });
 
 export const timer = style({
@@ -64,7 +108,9 @@ export const secondary = style({
 });
 
 export const notes = style({
+  margin: 0,
   whiteSpace: 'pre-wrap',
   lineHeight: 1.5,
-  minHeight: 80,
+  minHeight: 0,
+  overflow: 'auto',
 });
