@@ -3,7 +3,7 @@ import {style} from '@vanilla-extract/css';
 export const page = style({
   position: 'fixed',
   inset: 0,
-  background: '#0b0f14',
+  background: '#000',
   margin: 0,
   padding: 0,
 });

@@ -9,6 +9,8 @@ type Props = {
   page: number;
   className?: string;
   fullscreen?: boolean;
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
 };
 
 const documentCache = new Map<string, Promise<PDFDocumentProxy>>();
@@ -46,10 +48,13 @@ export function PdfPageCanvas({
   page,
   className,
   fullscreen = false,
+  onPrevPage,
+  onNextPage,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const canNavigate = Boolean(onPrevPage || onNextPage);
 
   useEffect(() => {
     let disposed = false;
@@ -96,13 +101,66 @@ export function PdfPageCanvas({
     };
   }, [src, page]);
 
+  useEffect(() => {
+    if (!canNavigate) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName?.toLowerCase() ?? '';
+      const isEditable =
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        target?.isContentEditable;
+      if (isEditable) {
+        return;
+      }
+
+      if (event.key === 'ArrowLeft' && onPrevPage) {
+        event.preventDefault();
+        onPrevPage();
+      }
+      if (event.key === 'ArrowRight' && onNextPage) {
+        event.preventDefault();
+        onNextPage();
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [canNavigate, onNextPage, onPrevPage]);
+
   return (
     <div
-      className={`${styles.wrapper} ${fullscreen ? styles.wrapperFullscreen : ''} ${className ?? ''}`.trim()}
+      className={`${styles.wrapper} ${fullscreen ? styles.wrapperFullscreen : ''} ${canNavigate ? styles.wrapperNavigable : ''} ${className ?? ''}`.trim()}
     >
       <canvas ref={canvasRef} className={styles.canvas} />
       {loading && <div className={styles.loading}>Loading PDF page...</div>}
       {error && <div className={styles.loading}>{error}</div>}
+      {canNavigate && onPrevPage ? (
+        <button
+          type='button'
+          aria-label='Previous page'
+          className={`pdf-nav-button ${styles.navButton} ${styles.navLeft}`}
+          onClick={onPrevPage}
+        >
+          {'<'}
+        </button>
+      ) : null}
+      {canNavigate && onNextPage ? (
+        <button
+          type='button'
+          aria-label='Next page'
+          className={`pdf-nav-button ${styles.navButton} ${styles.navRight}`}
+          onClick={onNextPage}
+        >
+          {'>'}
+        </button>
+      ) : null}
     </div>
   );
 }

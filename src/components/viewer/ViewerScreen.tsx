@@ -13,6 +13,18 @@ type Props = {
 export function ViewerScreen({sessionId, initialSession}: Props) {
   const [session, setSession] = useState<ClientSession | null>(initialSession);
 
+  async function moveSlide(action: 'next' | 'prev') {
+    try {
+      await fetch(`/api/sessions/${sessionId}/slide`, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({action}),
+      });
+    } catch {
+      // ignore transient movement request failures
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -52,6 +64,8 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
         page={session.currentPage}
         fullscreen
         className={styles.slide}
+        onPrevPage={() => moveSlide('prev')}
+        onNextPage={() => moveSlide('next')}
       />
       <div
         className={styles.pointer}
