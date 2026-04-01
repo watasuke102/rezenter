@@ -41,6 +41,8 @@ export const navButton = style({
   top: 0,
   bottom: 0,
   width: 72,
+  display: 'grid',
+  placeItems: 'center',
   border: 'none',
   background: 'rgba(0, 0, 0, 0.28)',
   color: '#e8edf5',

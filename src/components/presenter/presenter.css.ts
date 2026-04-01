@@ -102,6 +102,17 @@ export const button = style({
   color: '#ecf4ff',
 });
 
+export const iconButton = style([
+  button,
+  {
+    width: 36,
+    height: 36,
+    padding: 0,
+    display: 'grid',
+    placeItems: 'center',
+  },
+]);
+
 export const secondary = style({
   background: '#2a3543',
   color: '#dfe8f3',

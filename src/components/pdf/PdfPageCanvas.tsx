@@ -1,6 +1,7 @@
 'use client';
 
 import {useEffect, useRef, useState} from 'react';
+import {ChevronLeft, ChevronRight} from 'lucide-react';
 import type {PDFDocumentProxy} from 'pdfjs-dist/types/src/display/api';
 import * as styles from '@/components/pdf/pdf-page-canvas.css';
 
@@ -148,7 +149,7 @@ export function PdfPageCanvas({
           className={`pdf-nav-button ${styles.navButton} ${styles.navLeft}`}
           onClick={onPrevPage}
         >
-          {'<'}
+          <ChevronLeft size={28} aria-hidden='true' />
         </button>
       ) : null}
       {canNavigate && onNextPage ? (
@@ -158,7 +159,7 @@ export function PdfPageCanvas({
           className={`pdf-nav-button ${styles.navButton} ${styles.navRight}`}
           onClick={onNextPage}
         >
-          {'>'}
+          <ChevronRight size={28} aria-hidden='true' />
         </button>
       ) : null}
     </div>

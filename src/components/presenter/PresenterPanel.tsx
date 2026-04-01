@@ -1,5 +1,6 @@
 'use client';
 
+import {ChevronLeft, ChevronRight, Pause, Play, RotateCcw} from 'lucide-react';
 import {PdfPageCanvas} from '@/components/pdf/PdfPageCanvas';
 import * as styles from '@/components/presenter/presenter.css';
 
@@ -42,12 +43,22 @@ export function PresenterPanel({
           />
         </div>
         <div className={styles.pageNav}>
-          <button type='button' className={styles.button} onClick={onPrev}>
-            Prev
+          <button
+            type='button'
+            className={styles.iconButton}
+            onClick={onPrev}
+            aria-label='Previous page'
+          >
+            <ChevronLeft size={20} aria-hidden='true' />
           </button>
           <span className={styles.pageInfo}>{totalPagesText}</span>
-          <button type='button' className={styles.button} onClick={onNext}>
-            Next
+          <button
+            type='button'
+            className={styles.iconButton}
+            onClick={onNext}
+            aria-label='Next page'
+          >
+            <ChevronRight size={20} aria-hidden='true' />
           </button>
         </div>
         <div className={styles.previewSection}>
@@ -65,17 +76,23 @@ export function PresenterPanel({
         <div className={styles.controls}>
           <button
             type='button'
-            className={`${styles.button} ${styles.secondary}`}
+            className={`${styles.iconButton} ${styles.secondary}`}
             onClick={onStartPause}
+            aria-label={timerRunning ? 'Pause timer' : 'Start timer'}
           >
-            {timerRunning ? 'Pause' : 'Start'}
+            {timerRunning ? (
+              <Pause size={18} aria-hidden='true' />
+            ) : (
+              <Play size={18} aria-hidden='true' />
+            )}
           </button>
           <button
             type='button'
-            className={`${styles.button} ${styles.secondary}`}
+            className={`${styles.iconButton} ${styles.secondary}`}
             onClick={onResetTimer}
+            aria-label='Reset timer'
           >
-            Reset Timer
+            <RotateCcw size={18} aria-hidden='true' />
           </button>
         </div>
         <div>
