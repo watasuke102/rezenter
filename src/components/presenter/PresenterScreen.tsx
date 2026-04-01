@@ -19,9 +19,6 @@ function formatMs(ms: number) {
 export function PresenterScreen({sessionId}: Props) {
   const [session, setSession] = useState<ClientSession | null>(null);
   const [now, setNow] = useState(0);
-  const [resolvedTotalPages, setResolvedTotalPages] = useState<number | null>(
-    null,
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -55,40 +52,6 @@ export function PresenterScreen({sessionId}: Props) {
     const id = window.setInterval(() => setNow(Date.now()), 500);
     return () => window.clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    let disposed = false;
-
-    async function resolveTotalPages() {
-      if (!session?.pdfSrc) {
-        return;
-      }
-
-      try {
-        const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-        if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-          pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-            'pdfjs-dist/build/pdf.worker.min.mjs',
-            import.meta.url,
-          ).toString();
-        }
-        const task = pdfjs.getDocument(session.pdfSrc);
-        const doc = await task.promise;
-        if (!disposed) {
-          setResolvedTotalPages(doc.numPages);
-        }
-      } catch {
-        if (!disposed) {
-          setResolvedTotalPages(null);
-        }
-      }
-    }
-
-    resolveTotalPages();
-    return () => {
-      disposed = true;
-    };
-  }, [session?.pdfSrc]);
 
   const elapsedMs = useMemo(() => {
     if (!session) {
@@ -128,7 +91,7 @@ export function PresenterScreen({sessionId}: Props) {
     return <main>Loading presenter...</main>;
   }
 
-  const totalPages = resolvedTotalPages ?? session.totalPages;
+  const totalPages = session.totalPages;
   const totalPagesText = `${session.currentPage + 1}/${totalPages ?? '?'}`;
 
   return (

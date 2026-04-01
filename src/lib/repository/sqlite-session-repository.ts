@@ -31,6 +31,15 @@ type SessionRow = {
   pointer_updated_at: number | null;
 };
 
+function clampPage(page: number, totalPages: number | null): number {
+  const base = Math.max(0, Math.floor(page));
+  if (totalPages === null) {
+    return base;
+  }
+  const maxPage = Math.max(0, totalPages - 1);
+  return Math.min(base, maxPage);
+}
+
 function mapSession(row: SessionRow): SessionRecord {
   return {
     id: row.id,
@@ -94,9 +103,9 @@ export class SqliteSessionRepository implements SessionRepository {
     this.db
       .prepare(
         `INSERT INTO sessions (
-          id, title, source_type, pdf_path, pdf_url, created_at
+          id, title, source_type, pdf_path, pdf_url, created_at, total_pages
         ) VALUES (
-          @id, @title, @sourceType, @pdfPath, @pdfUrl, @createdAt
+          @id, @title, @sourceType, @pdfPath, @pdfUrl, @createdAt, @totalPages
         )`,
       )
       .run({
@@ -106,6 +115,7 @@ export class SqliteSessionRepository implements SessionRepository {
         pdfPath: input.pdfPath ?? null,
         pdfUrl: input.pdfUrl ?? null,
         createdAt,
+        totalPages: input.totalPages ?? null,
       });
 
     if (input.notes && input.notes.length > 0) {
@@ -156,27 +166,51 @@ export class SqliteSessionRepository implements SessionRepository {
   }
 
   nextPage(sessionId: string): SessionRecord | null {
+    const row = this.db
+      .prepare(`SELECT current_page, total_pages FROM sessions WHERE id = ?`)
+      .get(sessionId) as
+      | Pick<SessionRow, 'current_page' | 'total_pages'>
+      | undefined;
+    if (!row) {
+      return null;
+    }
+
+    const next = clampPage(row.current_page + 1, row.total_pages);
     this.db
-      .prepare(
-        `UPDATE sessions SET current_page = current_page + 1 WHERE id = ?`,
-      )
-      .run(sessionId);
+      .prepare(`UPDATE sessions SET current_page = @next WHERE id = @sessionId`)
+      .run({next, sessionId});
     return this.fetchSession(sessionId);
   }
 
   prevPage(sessionId: string): SessionRecord | null {
+    const row = this.db
+      .prepare(`SELECT current_page, total_pages FROM sessions WHERE id = ?`)
+      .get(sessionId) as
+      | Pick<SessionRow, 'current_page' | 'total_pages'>
+      | undefined;
+    if (!row) {
+      return null;
+    }
+
+    const prev = clampPage(row.current_page - 1, row.total_pages);
     this.db
-      .prepare(
-        `UPDATE sessions SET current_page = CASE WHEN current_page > 0 THEN current_page - 1 ELSE 0 END WHERE id = ?`,
-      )
-      .run(sessionId);
+      .prepare(`UPDATE sessions SET current_page = @prev WHERE id = @sessionId`)
+      .run({prev, sessionId});
     return this.fetchSession(sessionId);
   }
 
   setPage(sessionId: string, page: number): SessionRecord | null {
+    const row = this.db
+      .prepare(`SELECT total_pages FROM sessions WHERE id = ?`)
+      .get(sessionId) as Pick<SessionRow, 'total_pages'> | undefined;
+    if (!row) {
+      return null;
+    }
+
+    const target = clampPage(page, row.total_pages);
     this.db
       .prepare(`UPDATE sessions SET current_page = @page WHERE id = @sessionId`)
-      .run({sessionId, page: Math.max(0, page)});
+      .run({sessionId, page: target});
     return this.fetchSession(sessionId);
   }
 

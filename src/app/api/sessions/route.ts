@@ -3,6 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import {nanoid} from 'nanoid';
 import {parseNotesJson} from '@/lib/notes';
+import {countPdfPagesFromBytes} from '@/lib/pdf/metadata';
 import {getSessionRepository} from '@/lib/repository';
 
 const repo = getSessionRepository();
@@ -42,17 +43,21 @@ export async function POST(request: Request) {
     }
 
     if (hasPdfFile && pdfFile instanceof File) {
+      const pdfBytes = new Uint8Array(await pdfFile.arrayBuffer());
+      const totalPages = await countPdfPagesFromBytes(pdfBytes);
+
       const uploadsDir = path.join(process.cwd(), 'data', 'uploads');
       await fs.mkdir(uploadsDir, {recursive: true});
       const filename = `${Date.now()}-${nanoid(8)}.pdf`;
       const targetPath = path.join(uploadsDir, filename);
-      const bytes = Buffer.from(await pdfFile.arrayBuffer());
+      const bytes = Buffer.from(pdfBytes);
       await fs.writeFile(targetPath, bytes);
 
       const session = repo.create({
         title,
         sourceType: 'upload',
         pdfPath: targetPath,
+        totalPages,
         notes,
       });
 
@@ -66,10 +71,22 @@ export async function POST(request: Request) {
       );
     }
 
+    const sourceResponse = await fetch(pdfUrl);
+    if (!sourceResponse.ok) {
+      return NextResponse.json(
+        {error: 'Failed to fetch PDF from URL'},
+        {status: 400},
+      );
+    }
+
+    const sourceBytes = new Uint8Array(await sourceResponse.arrayBuffer());
+    const totalPages = await countPdfPagesFromBytes(sourceBytes);
+
     const session = repo.create({
       title,
       sourceType: 'url',
       pdfUrl,
+      totalPages,
       notes,
     });
 

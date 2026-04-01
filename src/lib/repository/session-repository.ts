@@ -11,6 +11,7 @@ export type CreateSessionInput = {
   sourceType: PdfSourceType;
   pdfPath?: string;
   pdfUrl?: string;
+  totalPages?: number;
   notes?: NoteEntry[];
 };
 
