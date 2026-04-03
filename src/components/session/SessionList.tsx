@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
-import * as styles from '@/components/session/home.css';
+import * as styles from '@/components/session/SessionList.css';
 import type {SessionSummary} from '@/lib/types';
 
 type Props = {

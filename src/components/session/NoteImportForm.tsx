@@ -1,7 +1,7 @@
 'use client';
 
 import {useState} from 'react';
-import * as styles from '@/components/session/detail.css';
+import * as styles from '@/components/session/NoteImportForm.css';
 
 type Props = {
   sessionId: string;

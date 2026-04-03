@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import {notFound} from 'next/navigation';
 import {NoteImportForm} from '@/components/session/NoteImportForm';
-import * as styles from '@/components/session/detail.css';
+import * as styles from '@/app/session/[id]/page.css';
 import {getSessionRepository} from '@/lib/repository';
 
 const repo = getSessionRepository();

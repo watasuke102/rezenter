@@ -2,7 +2,7 @@
 
 import {useState, type FormEvent} from 'react';
 import {useRouter} from 'next/navigation';
-import * as styles from '@/components/session/home.css';
+import * as styles from '@/components/session/CreateSessionForm.css';
 
 export function CreateSessionForm() {
   const router = useRouter();
@@ -46,7 +46,7 @@ export function CreateSessionForm() {
 
   return (
     <form
-      className={`${styles.panel} ${styles.form}`}
+      className={styles.form}
       onSubmit={onSubmit}
       encType='multipart/form-data'
     >

@@ -1,6 +1,6 @@
 import {CreateSessionForm} from '@/components/session/CreateSessionForm';
 import {SessionList} from '@/components/session/SessionList';
-import * as styles from '@/components/session/home.css';
+import * as styles from '@/app/page.css';
 import {getSessionRepository} from '@/lib/repository';
 
 const repo = getSessionRepository();

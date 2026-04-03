@@ -92,7 +92,7 @@ export const controls = style({
   flexWrap: 'wrap',
 });
 
-export const button = style({
+const button = style({
   border: 'none',
   borderRadius: 2,
   padding: '8px 14px',
