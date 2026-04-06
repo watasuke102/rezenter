@@ -3,8 +3,6 @@ import {style} from '@vanilla-extract/css';
 export const page = style({
   height: '100dvh',
   padding: 16,
-  background: '#0f1315',
-  color: '#e8ecef',
   display: 'grid',
   gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
   gap: 16,
@@ -41,11 +39,15 @@ export const sectionTitle = style({
 export const currentPreview = style({
   minHeight: 0,
   overflow: 'hidden',
+  border: '2px solid #98c379',
+  borderRadius: 2,
 });
 
 export const nextPreview = style({
   minHeight: 0,
   overflow: 'hidden',
+  border: '2px solid #abb2bf',
+  borderRadius: 2,
 });
 
 export const pageNav = style({
@@ -59,14 +61,11 @@ export const pageNav = style({
 export const pageInfo = style({
   minWidth: 110,
   textAlign: 'center',
-  color: '#d9e2ee',
   fontVariantNumeric: 'tabular-nums',
 });
 
 export const right = style({
-  border: '1px solid #35424c',
   borderRadius: 2,
-  background: '#141b23',
   padding: 12,
   display: 'grid',
   gridTemplateRows: 'auto auto minmax(0, 1fr)',
@@ -81,8 +80,8 @@ export const subTitle = style({
 });
 
 export const timer = style({
-  fontSize: '2rem',
-  fontWeight: 700,
+  fontSize: '3rem',
+  fontWeight: 'bold',
   letterSpacing: 1,
 });
 
@@ -98,8 +97,8 @@ const button = style({
   padding: '8px 14px',
   cursor: 'pointer',
   fontWeight: 700,
-  background: '#2f5d8a',
-  color: '#ecf4ff',
+  background: '#98c379',
+  color: '#282c34',
 });
 
 export const iconButton = style([
@@ -114,8 +113,8 @@ export const iconButton = style([
 ]);
 
 export const secondary = style({
-  background: '#2a3543',
-  color: '#dfe8f3',
+  color: '#282c34',
+  backgroundColor: '#abb2bf',
 });
 
 export const notes = style({

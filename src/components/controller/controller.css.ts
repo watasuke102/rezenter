@@ -22,13 +22,13 @@ export const button = style({
 });
 
 export const primary = style({
-  background: '#2f5d8a',
-  color: '#ecf4ff',
+  color: '#282c34',
+  background: '#98c379',
 });
 
 export const secondary = style({
-  background: '#1b2430',
-  color: '#c8d2df',
+  color: '#abb2bf',
+  background: '#282c34',
 });
 
 export const normal = style({
@@ -48,13 +48,13 @@ export const controls = style({
   gridTemplateColumns: 'auto 1fr auto',
   gap: 8,
   alignItems: 'center',
-  color: '#d4d9e0',
+  color: '#abb2bf',
 });
 
 export const trackpad = style({
   width: '100%',
   height: '100%',
-  background: '#111a24',
+  background: '#98c379',
   border: '1px solid #344255',
   borderRadius: 2,
   touchAction: 'none',
