@@ -18,6 +18,10 @@ function formatMs(ms: number) {
 
 export function PresenterScreen({sessionId}: Props) {
   const [session, setSession] = useState<ClientSession | null>(null);
+  const [sessionReceivedAtMs, setSessionReceivedAtMs] = useState(() =>
+    Date.now(),
+  );
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     const source = new EventSource(`/api/sessions/${sessionId}/events`);
@@ -29,6 +33,8 @@ export function PresenterScreen({sessionId}: Props) {
         };
         if (payload.session) {
           setSession(payload.session);
+          setSessionReceivedAtMs(Date.now());
+          setNowMs(Date.now());
         }
       } catch {
         // ignore malformed event payloads
@@ -45,12 +51,31 @@ export function PresenterScreen({sessionId}: Props) {
     };
   }, [sessionId]);
 
+  useEffect(() => {
+    if (!session?.timerRunning) {
+      return;
+    }
+
+    const id = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 250);
+
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [session?.timerRunning]);
+
   const elapsedMs = useMemo(() => {
     if (!session) {
       return 0;
     }
-    return session.timerElapsedMs;
-  }, [session]);
+
+    if (!session.timerRunning) {
+      return session.timerElapsedMs;
+    }
+
+    return session.timerElapsedMs + Math.max(0, nowMs - sessionReceivedAtMs);
+  }, [nowMs, session, sessionReceivedAtMs]);
 
   const currentNote = useMemo(() => {
     if (!session) {
