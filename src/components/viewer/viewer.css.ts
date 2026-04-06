@@ -18,9 +18,9 @@ export const pointer = style({
   width: 18,
   height: 18,
   borderRadius: '50%',
-  background: 'rgba(255, 77, 41, 0.9)',
-  border: '2px solid rgba(255, 255, 255, 0.8)',
-  boxShadow: '0 0 12px rgba(255, 77, 41, 0.7)',
+  background: 'rgba(255, 40, 20, 0.75)',
+  border: '1px solid rgba(255, 255, 255, 0.6)',
+  boxShadow: '0 0 12px rgba(255, 40, 20, 0.55)',
   transform: 'translate(-50%, -50%)',
   pointerEvents: 'none',
 });

@@ -20,30 +20,28 @@ export function PresenterScreen({sessionId}: Props) {
   const [session, setSession] = useState<ClientSession | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const source = new EventSource(`/api/sessions/${sessionId}/events`);
 
-    async function pull() {
+    source.addEventListener('session.update', event => {
       try {
-        const response = await fetch(`/api/sessions/${sessionId}`, {
-          cache: 'no-store',
-        });
-        if (!response.ok) {
-          return;
-        }
-        const payload = await response.json();
-        if (!cancelled) {
+        const payload = JSON.parse((event as MessageEvent).data) as {
+          session?: ClientSession;
+        };
+        if (payload.session) {
           setSession(payload.session);
         }
       } catch {
-        // ignore polling errors
+        // ignore malformed event payloads
       }
-    }
+    });
 
-    pull();
-    const id = window.setInterval(pull, 500);
+    source.addEventListener('session.not-found', () => {
+      source.close();
+      setSession(null);
+    });
+
     return () => {
-      cancelled = true;
-      window.clearInterval(id);
+      source.close();
     };
   }, [sessionId]);
 

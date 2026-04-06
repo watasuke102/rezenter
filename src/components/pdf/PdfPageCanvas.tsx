@@ -12,6 +12,7 @@ type Props = {
   fullscreen?: boolean;
   onPrevPage?: () => void;
   onNextPage?: () => void;
+  onViewportChange?: (viewport: {width: number; height: number}) => void;
 };
 
 const documentCache = new Map<string, Promise<PDFDocumentProxy>>();
@@ -51,6 +52,7 @@ export function PdfPageCanvas({
   fullscreen = false,
   onPrevPage,
   onNextPage,
+  onViewportChange,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,7 @@ export function PdfPageCanvas({
         }
 
         const viewport = loadedPage.getViewport({scale: 2});
+        onViewportChange?.({width: viewport.width, height: viewport.height});
         canvas.width = viewport.width;
         canvas.height = viewport.height;
 
@@ -100,7 +103,7 @@ export function PdfPageCanvas({
     return () => {
       disposed = true;
     };
-  }, [src, page]);
+  }, [onViewportChange, page, src]);
 
   useEffect(() => {
     if (!canNavigate) {

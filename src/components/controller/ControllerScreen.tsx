@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import * as styles from '@/components/controller/controller.css';
 
 type Props = {
@@ -9,8 +9,18 @@ type Props = {
 
 export function ControllerScreen({sessionId}: Props) {
   const [pointerMode, setPointerMode] = useState(false);
-  const [active, setActive] = useState(false);
-  const [last, setLast] = useState({x: 0, y: 0, at: 0});
+  const [fullScaleAdjustment, setFullScaleAdjustment] = useState(0);
+
+  const pointerActiveRef = useRef(false);
+  const activePointerIdRef = useRef<number | null>(null);
+  const lastXRef = useRef(0);
+  const lastYRef = useRef(0);
+  const lastMoveAtRef = useRef(0);
+  const lastSentAtRef = useRef(0);
+
+  const SEND_INTERVAL_MS = 20;
+  const BASE_FULL_SCALE_SPEED_PX_PER_SEC = 11000;
+  const DEAD_ZONE_SPEED_PX_PER_SEC = 20;
 
   async function slide(action: 'next' | 'prev') {
     await fetch(`/api/sessions/${sessionId}/slide`, {
@@ -21,30 +31,80 @@ export function ControllerScreen({sessionId}: Props) {
   }
 
   async function sendPointer(x: number, y: number) {
-    await fetch(`/api/sessions/${sessionId}/pointer`, {
-      method: 'POST',
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify({x, y}),
-    });
+    try {
+      await fetch(`/api/sessions/${sessionId}/pointer`, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({x: clamp(x, -1, 1), y: clamp(y, -1, 1)}),
+      });
+    } catch {
+      // ignore transient network errors on rapid pointer updates
+    }
   }
 
-  function onDown(clientX: number, clientY: number) {
-    setActive(true);
-    setLast({x: clientX, y: clientY, at: performance.now()});
+  function clamp(v: number, min: number, max: number) {
+    return Math.max(min, Math.min(max, v));
   }
 
-  function onMove(clientX: number, clientY: number) {
-    if (!active) {
+  function getFullScaleSpeedPxPerSec() {
+    return Math.max(
+      200,
+      BASE_FULL_SCALE_SPEED_PX_PER_SEC - fullScaleAdjustment,
+    );
+  }
+
+  function beginPointer(clientX: number, clientY: number) {
+    if (!pointerMode) {
       return;
     }
+    pointerActiveRef.current = true;
+    lastXRef.current = clientX;
+    lastYRef.current = clientY;
+    lastMoveAtRef.current = performance.now();
+  }
+
+  function endPointer() {
+    pointerActiveRef.current = false;
+    activePointerIdRef.current = null;
+    lastMoveAtRef.current = 0;
+  }
+
+  function processMove(clientX: number, clientY: number) {
+    if (!pointerMode || !pointerActiveRef.current) {
+      return;
+    }
+
     const now = performance.now();
-    const dt = Math.max(1, now - last.at);
-    const dx = (clientX - last.x) / dt;
-    const dy = (clientY - last.y) / dt;
-    const nx = Math.max(-1, Math.min(1, dx * 0.06));
-    const ny = Math.max(-1, Math.min(1, dy * 0.06));
-    setLast({x: clientX, y: clientY, at: now});
-    void sendPointer(nx, ny);
+    const dtMs = now - lastMoveAtRef.current;
+    if (dtMs <= 0) {
+      return;
+    }
+
+    const deltaX = clientX - lastXRef.current;
+    const deltaY = clientY - lastYRef.current;
+    const dtSec = dtMs / 1000;
+    const speedX = deltaX / dtSec;
+    const speedY = deltaY / dtSec;
+
+    lastXRef.current = clientX;
+    lastYRef.current = clientY;
+    lastMoveAtRef.current = now;
+
+    const speedMagnitude = Math.hypot(speedX, speedY);
+    if (speedMagnitude < DEAD_ZONE_SPEED_PX_PER_SEC) {
+      return;
+    }
+
+    const fullScaleSpeed = getFullScaleSpeedPxPerSec();
+    const dx = clamp(speedX / fullScaleSpeed, -1, 1);
+    const dy = clamp(speedY / fullScaleSpeed, -1, 1);
+
+    if (now - lastSentAtRef.current < SEND_INTERVAL_MS) {
+      return;
+    }
+    lastSentAtRef.current = now;
+
+    void sendPointer(dx, dy);
   }
 
   return (
@@ -52,7 +112,15 @@ export function ControllerScreen({sessionId}: Props) {
       <button
         className={`${styles.button} ${styles.secondary}`}
         type='button'
-        onClick={() => setPointerMode(prev => !prev)}
+        onClick={() => {
+          setPointerMode(prev => {
+            const next = !prev;
+            if (!next) {
+              endPointer();
+            }
+            return next;
+          });
+        }}
       >
         {pointerMode ? 'Button Mode' : 'Pointer Mode'}
       </button>
@@ -77,16 +145,60 @@ export function ControllerScreen({sessionId}: Props) {
       ) : (
         <div className={styles.pointer}>
           <div className={styles.controls}>
-            <span>Move pointer</span>
-            <span />
-            <span>live</span>
+            <span>SLOW</span>
+            <input
+              className={styles.speedSlider}
+              type='range'
+              min='-4000'
+              max='4000'
+              step='100'
+              value={fullScaleAdjustment}
+              aria-label='speed adjustment'
+              onChange={event =>
+                setFullScaleAdjustment(Number(event.currentTarget.value))
+              }
+            />
+            <span>FAST</span>
+            <span className={styles.speedValue}>{fullScaleAdjustment}</span>
           </div>
           <div
             className={styles.trackpad}
-            onPointerDown={event => onDown(event.clientX, event.clientY)}
-            onPointerMove={event => onMove(event.clientX, event.clientY)}
-            onPointerUp={() => setActive(false)}
-            onPointerCancel={() => setActive(false)}
+            onPointerDown={event => {
+              if (
+                activePointerIdRef.current !== null &&
+                activePointerIdRef.current !== event.pointerId
+              ) {
+                return;
+              }
+              activePointerIdRef.current = event.pointerId;
+              beginPointer(event.clientX, event.clientY);
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={event => {
+              if (event.pointerId !== activePointerIdRef.current) {
+                return;
+              }
+              event.preventDefault();
+              processMove(event.clientX, event.clientY);
+            }}
+            onPointerUp={event => {
+              if (event.pointerId === activePointerIdRef.current) {
+                endPointer();
+              }
+            }}
+            onPointerCancel={event => {
+              if (event.pointerId === activePointerIdRef.current) {
+                endPointer();
+              }
+            }}
+            onPointerLeave={event => {
+              if (
+                event.pointerId === activePointerIdRef.current &&
+                event.buttons === 0
+              ) {
+                endPointer();
+              }
+            }}
           />
         </div>
       )}

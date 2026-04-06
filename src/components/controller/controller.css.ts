@@ -45,10 +45,21 @@ export const pointer = style({
 
 export const controls = style({
   display: 'grid',
-  gridTemplateColumns: 'auto 1fr auto',
-  gap: 8,
+  gridTemplateColumns: 'auto 1fr auto auto',
+  gap: 10,
   alignItems: 'center',
+  marginInline: 12,
   color: '#abb2bf',
+});
+
+export const speedSlider = style({
+  width: '100%',
+});
+
+export const speedValue = style({
+  fontSize: '0.95rem',
+  minWidth: '5.5rem',
+  textAlign: 'right',
 });
 
 export const trackpad = style({
@@ -58,4 +69,5 @@ export const trackpad = style({
   border: '1px solid #344255',
   borderRadius: 2,
   touchAction: 'none',
+  userSelect: 'none',
 });
