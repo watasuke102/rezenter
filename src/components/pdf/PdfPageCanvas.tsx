@@ -16,6 +16,13 @@ type Props = {
 };
 
 const documentCache = new Map<string, Promise<PDFDocumentProxy>>();
+type CachedPage = {
+  canvas: HTMLCanvasElement;
+  width: number;
+  height: number;
+};
+
+const pageCache = new Map<string, Promise<CachedPage>>();
 
 async function getDocument(src: string) {
   const cached = documentCache.get(src);
@@ -45,6 +52,57 @@ async function getDocument(src: string) {
   return loadPromise;
 }
 
+function getPageCacheKey(src: string, page: number) {
+  return `${src}::${page}`;
+}
+
+async function renderPageToCanvas(src: string, page: number) {
+  const pdf = await getDocument(src);
+  const loadedPage = await pdf.getPage(page);
+  const viewport = loadedPage.getViewport({scale: 2});
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Failed to acquire canvas context');
+  }
+
+  await loadedPage.render({
+    canvas,
+    canvasContext: context,
+    viewport,
+  }).promise;
+
+  return {canvas, width: viewport.width, height: viewport.height};
+}
+
+async function getRenderedPage(src: string, page: number) {
+  const cacheKey = getPageCacheKey(src, page);
+  const cached = pageCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const renderPromise = renderPageToCanvas(src, page).catch(error => {
+    pageCache.delete(cacheKey);
+    throw error;
+  });
+
+  pageCache.set(cacheKey, renderPromise);
+  return renderPromise;
+}
+
+async function preloadRenderedPages(src: string) {
+  const pdf = await getDocument(src);
+  await Promise.all(
+    Array.from({length: pdf.numPages}, (_, index) =>
+      getRenderedPage(src, index + 1),
+    ),
+  );
+}
+
 export function PdfPageCanvas({
   src,
   page,
@@ -60,15 +118,18 @@ export function PdfPageCanvas({
   const canNavigate = Boolean(onPrevPage || onNextPage);
 
   useEffect(() => {
+    void preloadRenderedPages(src);
+  }, [src]);
+
+  useEffect(() => {
     let disposed = false;
 
     async function run() {
       setLoading(true);
       setError(null);
       try {
-        const pdf = await getDocument(src);
         const targetPage = Math.max(1, page + 1);
-        const loadedPage = await pdf.getPage(targetPage);
+        const renderedPage = await getRenderedPage(src, targetPage);
 
         const canvas = canvasRef.current;
         if (!canvas || disposed) {
@@ -80,16 +141,14 @@ export function PdfPageCanvas({
           return;
         }
 
-        const viewport = loadedPage.getViewport({scale: 2});
-        onViewportChange?.({width: viewport.width, height: viewport.height});
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        await loadedPage.render({
-          canvas,
-          canvasContext: context,
-          viewport,
-        }).promise;
+        onViewportChange?.({
+          width: renderedPage.width,
+          height: renderedPage.height,
+        });
+        canvas.width = renderedPage.width;
+        canvas.height = renderedPage.height;
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(renderedPage.canvas, 0, 0);
       } catch {
         setError('PDFを表示できませんでした');
       } finally {
