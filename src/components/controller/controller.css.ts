@@ -1,4 +1,4 @@
-import {style} from '@vanilla-extract/css';
+import {ComplexStyleRule, style} from '@vanilla-extract/css';
 
 export const body = style({
   margin: 0,
@@ -40,7 +40,7 @@ export const normal = style({
 export const pointer = style({
   display: 'grid',
   gridTemplateRows: 'auto 1fr',
-  gap: 8,
+  gap: 48,
 });
 
 export const controls = style({
@@ -52,14 +52,28 @@ export const controls = style({
   color: '#abb2bf',
 });
 
+const thumbRule: ComplexStyleRule = {
+  WebkitAppearance: 'none',
+  width: 40,
+  height: 40,
+  background: '#98c379',
+  border: '1px solid #344255',
+  borderRadius: 6,
+};
 export const speedSlider = style({
   width: '100%',
+  WebkitAppearance: 'none',
+  borderRadius: 6,
+  '::-webkit-slider-thumb': thumbRule,
+  '::-moz-range-thumb': thumbRule,
 });
 
 export const speedValue = style({
-  fontSize: '0.95rem',
-  minWidth: '5.5rem',
+  fontSize: '1.2em',
+  fontWeight: 'bold',
+  minWidth: '5.2ch', // '-' + 4 digits + margin (ch = width of '0')
   textAlign: 'right',
+  fontFamily: 'monospace, sans-serif',
 });
 
 export const trackpad = style({

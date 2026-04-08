@@ -31,8 +31,9 @@ export function ControllerScreen({sessionId}: Props) {
   const lastGestureSentAtRef = useRef(0);
 
   const SEND_INTERVAL_MS = 20;
-  const BASE_FULL_SCALE_SPEED_PX_PER_SEC = 11000;
+  const BASE_FULL_SCALE_SPEED_PX_PER_SEC = 14000;
   const DEAD_ZONE_SPEED_PX_PER_SEC = 20;
+  const PAGE_PAN_SPEED_MULTIPLIER = 3.1;
 
   async function slide(action: 'next' | 'prev') {
     await fetch(`/api/sessions/${sessionId}/slide`, {
@@ -278,13 +279,15 @@ export function ControllerScreen({sessionId}: Props) {
     const scaleMultiplier = state.distance / previousDistance;
     const offsetDeltaX = clamp(
       ((state.centerX - previousCenter.x) / width) *
-        (BASE_FULL_SCALE_SPEED_PX_PER_SEC / getFullScaleSpeedPxPerSec()),
+        (BASE_FULL_SCALE_SPEED_PX_PER_SEC / getFullScaleSpeedPxPerSec()) *
+        PAGE_PAN_SPEED_MULTIPLIER,
       -1,
       1,
     );
     const offsetDeltaY = clamp(
       ((state.centerY - previousCenter.y) / height) *
-        (BASE_FULL_SCALE_SPEED_PX_PER_SEC / getFullScaleSpeedPxPerSec()),
+        (BASE_FULL_SCALE_SPEED_PX_PER_SEC / getFullScaleSpeedPxPerSec()) *
+        PAGE_PAN_SPEED_MULTIPLIER,
       -1,
       1,
     );
