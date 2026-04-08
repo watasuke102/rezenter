@@ -5,7 +5,7 @@ export const body = style({
   width: '100dvw',
   height: '100dvh',
   display: 'grid',
-  gridTemplateRows: '60px 1fr',
+  gridTemplateRows: '1fr 60px',
   gap: 12,
   padding: 10,
   background: '#1a1a1a',

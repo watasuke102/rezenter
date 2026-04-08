@@ -309,24 +309,6 @@ export function ControllerScreen({sessionId}: Props) {
 
   return (
     <main className={styles.body}>
-      <button
-        className={`${styles.button} ${styles.secondary}`}
-        type='button'
-        onClick={() => {
-          setPointerMode(prev => {
-            const next = !prev;
-            if (!next) {
-              endPointer();
-              activePointersRef.current.clear();
-              endGesture();
-            }
-            return next;
-          });
-        }}
-      >
-        {pointerMode ? 'Button Mode' : 'Pointer Mode'}
-      </button>
-
       {!pointerMode ? (
         <div className={styles.normal}>
           <button
@@ -470,6 +452,23 @@ export function ControllerScreen({sessionId}: Props) {
           />
         </div>
       )}
+      <button
+        className={`${styles.button} ${styles.secondary}`}
+        type='button'
+        onClick={() => {
+          setPointerMode(prev => {
+            const next = !prev;
+            if (!next) {
+              endPointer();
+              activePointersRef.current.clear();
+              endGesture();
+            }
+            return next;
+          });
+        }}
+      >
+        {pointerMode ? 'Button Mode' : 'Pointer Mode'}
+      </button>
     </main>
   );
 }
