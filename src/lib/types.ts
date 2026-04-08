@@ -20,6 +20,9 @@ export type SessionRecord = {
   pointerX: number;
   pointerY: number;
   pointerUpdatedAt: number | null;
+  viewerScale: number;
+  viewerOffsetX: number;
+  viewerOffsetY: number;
 };
 
 export type SessionWithNotes = SessionRecord & {

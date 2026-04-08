@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {PdfPageCanvas} from '@/components/pdf/PdfPageCanvas';
 import type {ClientSession} from '@/lib/client-types';
 import * as styles from '@/components/viewer/viewer.css';
@@ -13,6 +13,9 @@ type Props = {
 export function ViewerScreen({sessionId, initialSession}: Props) {
   const [session, setSession] = useState<ClientSession | null>(initialSession);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const lastPointerUpdatedAtRef = useRef<number | null>(
+    initialSession.pointerUpdatedAt,
+  );
   const [viewportSize, setViewportSize] = useState(() => ({
     width: typeof window === 'undefined' ? 1 : window.innerWidth,
     height: typeof window === 'undefined' ? 1 : window.innerHeight,
@@ -43,8 +46,13 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
           session?: ClientSession;
         };
         if (payload.session) {
+          if (
+            payload.session.pointerUpdatedAt !== lastPointerUpdatedAtRef.current
+          ) {
+            setNowMs(Date.now());
+          }
+          lastPointerUpdatedAtRef.current = payload.session.pointerUpdatedAt;
           setSession(payload.session);
-          setNowMs(Date.now());
         }
       } catch {
         // ignore malformed event payloads
@@ -100,30 +108,70 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     return <main className={styles.page}>Loading session...</main>;
   }
 
-  const pointerRect = (() => {
+  const VIEWER_OFFSET_LIMIT = 0.999;
+
+  const displayRect = (() => {
     if (!pdfViewport) {
       return null;
     }
 
     const pdfAspect = pdfViewport.width / pdfViewport.height;
-    const containerAspect = viewportSize.width / viewportSize.height;
+    const containerWidth = viewportSize.width;
+    const containerHeight = viewportSize.height;
+    const containerAspect = containerWidth / containerHeight;
+    const baseWidth =
+      containerAspect > pdfAspect
+        ? containerHeight * pdfAspect
+        : containerWidth;
+    const baseHeight =
+      containerAspect > pdfAspect
+        ? containerHeight
+        : containerWidth / pdfAspect;
+    const scale = Math.max(1, session.viewerScale);
+    const offsetX = Math.max(
+      -VIEWER_OFFSET_LIMIT,
+      Math.min(VIEWER_OFFSET_LIMIT, session.viewerOffsetX),
+    );
+    const offsetY = Math.max(
+      -VIEWER_OFFSET_LIMIT,
+      Math.min(VIEWER_OFFSET_LIMIT, session.viewerOffsetY),
+    );
+    const width = baseWidth * scale;
+    const height = baseHeight * scale;
+    const rangeX = Math.max(0, width - containerWidth) / 2;
+    const rangeY = Math.max(0, height - containerHeight) / 2;
+    const centerX = containerWidth / 2 + offsetX * rangeX;
+    const centerY = containerHeight / 2 + offsetY * rangeY;
 
-    if (containerAspect > pdfAspect) {
-      const contentWidth = pdfAspect / containerAspect;
-      const insetX = (1 - contentWidth) / 2;
-      return {
-        left: insetX + ((session.pointerX + 1) / 2) * contentWidth,
-        top: (session.pointerY + 1) / 2,
-      };
-    }
-
-    const contentHeight = containerAspect / pdfAspect;
-    const insetY = (1 - contentHeight) / 2;
     return {
-      left: (session.pointerX + 1) / 2,
-      top: insetY + ((session.pointerY + 1) / 2) * contentHeight,
+      left: centerX - width / 2,
+      top: centerY - height / 2,
+      width,
+      height,
     };
   })();
+
+  const pointerRect = (() => {
+    if (!displayRect) {
+      return null;
+    }
+
+    return {
+      left: displayRect.left + ((session.pointerX + 1) / 2) * displayRect.width,
+      top: displayRect.top + ((session.pointerY + 1) / 2) * displayRect.height,
+    };
+  })();
+
+  const slideStyle = displayRect
+    ? {
+        right: 'auto',
+        bottom: 'auto',
+        left: `${displayRect.left}px`,
+        top: `${displayRect.top}px`,
+        width: `${displayRect.width}px`,
+        height: `${displayRect.height}px`,
+      }
+    : undefined;
 
   const isPointerVisible =
     session.pointerUpdatedAt !== null &&
@@ -136,6 +184,7 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
         page={session.currentPage}
         fullscreen
         className={styles.slide}
+        style={slideStyle}
         onViewportChange={setPdfViewport}
         onPrevPage={() => moveSlide('prev')}
         onNextPage={() => moveSlide('next')}
@@ -143,8 +192,8 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
       <div
         className={styles.pointer}
         style={{
-          left: `${(pointerRect?.left ?? 0.5) * 100}%`,
-          top: `${(pointerRect?.top ?? 0.5) * 100}%`,
+          left: `${pointerRect?.left ?? viewportSize.width / 2}px`,
+          top: `${pointerRect?.top ?? viewportSize.height / 2}px`,
           opacity: isPointerVisible ? 1 : 0,
         }}
       />

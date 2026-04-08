@@ -25,7 +25,10 @@ function initSchema(db: Database.Database) {
       timer_started_at INTEGER,
       pointer_x REAL NOT NULL DEFAULT 0,
       pointer_y REAL NOT NULL DEFAULT 0,
-      pointer_updated_at INTEGER
+      pointer_updated_at INTEGER,
+      viewer_scale REAL NOT NULL DEFAULT 1,
+      viewer_offset_x REAL NOT NULL DEFAULT 0,
+      viewer_offset_y REAL NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS notes (
@@ -38,6 +41,30 @@ function initSchema(db: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_notes_session_id ON notes(session_id);
   `);
+
+  const columns = new Set(
+    (
+      db.prepare(`PRAGMA table_info(sessions)`).all() as Array<{name: string}>
+    ).map(column => column.name),
+  );
+
+  if (!columns.has('viewer_scale')) {
+    db.prepare(
+      `ALTER TABLE sessions ADD COLUMN viewer_scale REAL NOT NULL DEFAULT 1`,
+    ).run();
+  }
+
+  if (!columns.has('viewer_offset_x')) {
+    db.prepare(
+      `ALTER TABLE sessions ADD COLUMN viewer_offset_x REAL NOT NULL DEFAULT 0`,
+    ).run();
+  }
+
+  if (!columns.has('viewer_offset_y')) {
+    db.prepare(
+      `ALTER TABLE sessions ADD COLUMN viewer_offset_y REAL NOT NULL DEFAULT 0`,
+    ).run();
+  }
 }
 
 export function getDb() {

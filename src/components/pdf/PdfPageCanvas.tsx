@@ -1,5 +1,6 @@
 'use client';
 
+import type {CSSProperties} from 'react';
 import {useEffect, useRef, useState} from 'react';
 import {ChevronLeft, ChevronRight} from 'lucide-react';
 import type {PDFDocumentProxy} from 'pdfjs-dist/types/src/display/api';
@@ -13,6 +14,7 @@ type Props = {
   onPrevPage?: () => void;
   onNextPage?: () => void;
   onViewportChange?: (viewport: {width: number; height: number}) => void;
+  style?: CSSProperties;
 };
 
 const documentCache = new Map<string, Promise<PDFDocumentProxy>>();
@@ -111,6 +113,7 @@ export function PdfPageCanvas({
   onPrevPage,
   onNextPage,
   onViewportChange,
+  style,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,6 +203,7 @@ export function PdfPageCanvas({
   return (
     <div
       className={`${styles.wrapper} ${fullscreen ? styles.wrapperFullscreen : ''} ${canNavigate ? styles.wrapperNavigable : ''} ${className ?? ''}`.trim()}
+      style={style}
     >
       <canvas ref={canvasRef} className={styles.canvas} />
       {loading && <div className={styles.loading}>Loading PDF page...</div>}

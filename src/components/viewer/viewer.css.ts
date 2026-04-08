@@ -11,6 +11,7 @@ export const page = style({
 export const slide = style({
   position: 'absolute',
   inset: 0,
+  zIndex: 1,
 });
 
 export const pointer = style({
@@ -23,4 +24,5 @@ export const pointer = style({
   boxShadow: '0 0 12px rgba(255, 40, 20, 0.55)',
   transform: 'translate(-50%, -50%)',
   pointerEvents: 'none',
+  zIndex: 2,
 });

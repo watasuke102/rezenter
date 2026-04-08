@@ -27,4 +27,10 @@ export interface SessionRepository {
   setTimerRunning(sessionId: string, running: boolean): SessionRecord | null;
   resetTimer(sessionId: string): SessionRecord | null;
   updatePointer(sessionId: string, x: number, y: number): SessionRecord | null;
+  updateViewerTransform(
+    sessionId: string,
+    scaleMultiplier: number,
+    offsetDeltaX: number,
+    offsetDeltaY: number,
+  ): SessionRecord | null;
 }

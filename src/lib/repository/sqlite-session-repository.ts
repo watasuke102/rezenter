@@ -29,6 +29,9 @@ type SessionRow = {
   pointer_x: number;
   pointer_y: number;
   pointer_updated_at: number | null;
+  viewer_scale: number;
+  viewer_offset_x: number;
+  viewer_offset_y: number;
 };
 
 function clampPage(page: number, totalPages: number | null): number {
@@ -56,6 +59,9 @@ function mapSession(row: SessionRow): SessionRecord {
     pointerX: row.pointer_x,
     pointerY: row.pointer_y,
     pointerUpdatedAt: row.pointer_updated_at,
+    viewerScale: row.viewer_scale,
+    viewerOffsetX: row.viewer_offset_x,
+    viewerOffsetY: row.viewer_offset_y,
   };
 }
 
@@ -109,9 +115,11 @@ export class SqliteSessionRepository implements SessionRepository {
     this.db
       .prepare(
         `INSERT INTO sessions (
-          id, title, source_type, pdf_path, pdf_url, created_at, total_pages
+          id, title, source_type, pdf_path, pdf_url, created_at, total_pages,
+          viewer_scale, viewer_offset_x, viewer_offset_y
         ) VALUES (
-          @id, @title, @sourceType, @pdfPath, @pdfUrl, @createdAt, @totalPages
+          @id, @title, @sourceType, @pdfPath, @pdfUrl, @createdAt, @totalPages,
+          @viewerScale, @viewerOffsetX, @viewerOffsetY
         )`,
       )
       .run({
@@ -122,6 +130,9 @@ export class SqliteSessionRepository implements SessionRepository {
         pdfUrl: input.pdfUrl ?? null,
         createdAt,
         totalPages: input.totalPages ?? null,
+        viewerScale: 1,
+        viewerOffsetX: 0,
+        viewerOffsetY: 0,
       });
 
     if (input.notes && input.notes.length > 0) {
@@ -278,6 +289,63 @@ export class SqliteSessionRepository implements SessionRepository {
     return this.fetchSession(sessionId);
   }
 
+  updateViewerTransform(
+    sessionId: string,
+    scaleMultiplier: number,
+    offsetDeltaX: number,
+    offsetDeltaY: number,
+  ): SessionRecord | null {
+    const row = this.db
+      .prepare(`SELECT * FROM sessions WHERE id = ?`)
+      .get(sessionId) as SessionRow | undefined;
+    if (!row) {
+      return null;
+    }
+
+    const safeMultiplier =
+      Number.isFinite(scaleMultiplier) && scaleMultiplier > 0
+        ? scaleMultiplier
+        : 1;
+    const safeOffsetDeltaX = Number.isFinite(offsetDeltaX) ? offsetDeltaX : 0;
+    const safeOffsetDeltaY = Number.isFinite(offsetDeltaY) ? offsetDeltaY : 0;
+    const nextScale = Math.max(1, row.viewer_scale * safeMultiplier);
+    const nextOffsetX = clampValue(
+      row.viewer_offset_x + safeOffsetDeltaX,
+      -0.999,
+      0.999,
+    );
+    const nextOffsetY = clampValue(
+      row.viewer_offset_y + safeOffsetDeltaY,
+      -0.999,
+      0.999,
+    );
+
+    if (
+      nextScale === row.viewer_scale &&
+      nextOffsetX === row.viewer_offset_x &&
+      nextOffsetY === row.viewer_offset_y
+    ) {
+      return this.fetchSession(sessionId);
+    }
+
+    this.db
+      .prepare(
+        `UPDATE sessions
+         SET viewer_scale = @viewerScale,
+             viewer_offset_x = @viewerOffsetX,
+             viewer_offset_y = @viewerOffsetY
+         WHERE id = @sessionId`,
+      )
+      .run({
+        sessionId,
+        viewerScale: nextScale,
+        viewerOffsetX: nextOffsetX,
+        viewerOffsetY: nextOffsetY,
+      });
+
+    return this.fetchSession(sessionId);
+  }
+
   private fetchSession(sessionId: string): SessionRecord | null {
     const row = this.db
       .prepare(`SELECT * FROM sessions WHERE id = ?`)
@@ -290,4 +358,8 @@ export class SqliteSessionRepository implements SessionRepository {
       timerElapsedMs: computeElapsed(row, Date.now()),
     };
   }
+}
+
+function clampValue(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
