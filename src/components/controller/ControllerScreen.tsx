@@ -22,6 +22,10 @@ export function ControllerScreen({sessionId}: Props) {
   const gestureModeRef = useRef<'pan' | 'pinch' | null>(null);
   const lastGestureCenterRef = useRef<{x: number; y: number} | null>(null);
   const lastGestureDistanceRef = useRef<number | null>(null);
+  const lastGesturePointersRef = useRef<Map<
+    number,
+    {x: number; y: number}
+  > | null>(null);
   const gestureStartCenterRef = useRef<{x: number; y: number} | null>(null);
   const gestureStartDistanceRef = useRef<number | null>(null);
   const lastGestureSentAtRef = useRef(0);
@@ -102,6 +106,7 @@ export function ControllerScreen({sessionId}: Props) {
     gestureModeRef.current = null;
     lastGestureCenterRef.current = null;
     lastGestureDistanceRef.current = null;
+    lastGesturePointersRef.current = null;
     gestureStartCenterRef.current = null;
     gestureStartDistanceRef.current = null;
     lastGestureSentAtRef.current = 0;
@@ -151,6 +156,9 @@ export function ControllerScreen({sessionId}: Props) {
     gestureStartDistanceRef.current = state.distance;
     lastGestureCenterRef.current = {x: state.centerX, y: state.centerY};
     lastGestureDistanceRef.current = state.distance;
+    lastGesturePointersRef.current = new Map(
+      Array.from(activePointersRef.current.entries()).slice(0, 2),
+    );
     lastGestureSentAtRef.current = performance.now();
   }
 
@@ -226,18 +234,45 @@ export function ControllerScreen({sessionId}: Props) {
       return;
     }
 
-    const centerMoveX = (state.centerX - startCenter.x) / width;
-    const centerMoveY = (state.centerY - startCenter.y) / height;
-    const panMagnitude = Math.hypot(centerMoveX, centerMoveY);
-    const pinchMagnitude =
-      Math.abs(state.distance - startDistance) / startDistance;
+    let gestureDirection: 'pan' | 'pinch' | null = null;
+    const lastGesturePointers = lastGesturePointersRef.current;
+    if (lastGesturePointers && lastGesturePointers.size >= 2) {
+      const entries = Array.from(activePointersRef.current.entries()).slice(
+        0,
+        2,
+      );
+      if (entries.length === 2) {
+        const [idA, currentA] = entries[0];
+        const [idB, currentB] = entries[1];
+        const previousA = lastGesturePointers.get(idA);
+        const previousB = lastGesturePointers.get(idB);
+
+        if (previousA && previousB) {
+          const moveAx = currentA.x - previousA.x;
+          const moveAy = currentA.y - previousA.y;
+          const moveBx = currentB.x - previousB.x;
+          const moveBy = currentB.y - previousB.y;
+          const moveALen = Math.hypot(moveAx, moveAy);
+          const moveBLen = Math.hypot(moveBx, moveBy);
+          if (moveALen > 0.0001 && moveBLen > 0.0001) {
+            const cosine =
+              (moveAx * moveBx + moveAy * moveBy) / (moveALen * moveBLen);
+
+            if (cosine <= -0.45) {
+              gestureDirection = 'pinch';
+            } else if (cosine >= 0.45) {
+              gestureDirection = 'pan';
+            }
+          }
+        }
+      }
+    }
 
     if (gestureModeRef.current === null) {
-      if (Math.max(panMagnitude, pinchMagnitude) < 0.005) {
+      if (gestureDirection === null) {
         return;
       }
-
-      gestureModeRef.current = pinchMagnitude > panMagnitude ? 'pinch' : 'pan';
+      gestureModeRef.current = gestureDirection;
     }
 
     const scaleMultiplier = state.distance / previousDistance;
@@ -256,6 +291,9 @@ export function ControllerScreen({sessionId}: Props) {
 
     lastGestureCenterRef.current = {x: state.centerX, y: state.centerY};
     lastGestureDistanceRef.current = state.distance;
+    lastGesturePointersRef.current = new Map(
+      Array.from(activePointersRef.current.entries()).slice(0, 2),
+    );
     lastGestureSentAtRef.current = now;
 
     if (gestureModeRef.current === 'pinch') {
