@@ -40,7 +40,13 @@ async function getDocument(src: string) {
         import.meta.url,
       ).toString();
     }
-    const task = pdfjs.getDocument(src);
+    const task = pdfjs.getDocument({
+      url: src,
+      cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
+      cMapPacked: true,
+      standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
+      useSystemFonts: true,
+    });
     return task.promise;
   })();
 
