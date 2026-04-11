@@ -60,6 +60,7 @@ const thumbRule: ComplexStyleRule = {
   border: '1px solid #344255',
   borderRadius: 6,
 };
+
 export const speedSlider = style({
   width: '100%',
   WebkitAppearance: 'none',
@@ -71,17 +72,7 @@ export const speedSlider = style({
 export const speedValue = style({
   fontSize: '1.2em',
   fontWeight: 'bold',
-  minWidth: '5.2ch', // '-' + 4 digits + margin (ch = width of '0')
+  minWidth: '5.2ch',
   textAlign: 'right',
   fontFamily: 'monospace, sans-serif',
-});
-
-export const trackpad = style({
-  width: '100%',
-  height: '100%',
-  background: '#98c379',
-  border: '1px solid #344255',
-  borderRadius: 2,
-  touchAction: 'none',
-  userSelect: 'none',
 });
