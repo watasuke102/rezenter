@@ -1,6 +1,6 @@
 'use client';
 
-import {useState} from 'react';
+import {type ChangeEvent, useRef, useState} from 'react';
 import * as styles from '@/components/session/NoteImportForm.css';
 
 type Props = {
@@ -8,42 +8,66 @@ type Props = {
 };
 
 export function NoteImportForm({sessionId}: Props) {
-  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function upload() {
+  async function upload(file: File) {
     setMessage(null);
+    setUploading(true);
 
-    if (!file) {
-      setMessage('JSONファイルを選択してください');
+    try {
+      const jsonText = await file.text();
+      const response = await fetch(`/api/sessions/${sessionId}/notes`, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({jsonText}),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setMessage(payload.error ?? 'Import failed');
+        return;
+      }
+      setMessage('ノートを更新しました');
+    } catch {
+      setMessage('読み込み中に通信エラーが発生しました');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function openFilePicker() {
+    if (uploading) {
       return;
     }
+    fileInputRef.current?.click();
+  }
 
-    const jsonText = await file.text();
-    const response = await fetch(`/api/sessions/${sessionId}/notes`, {
-      method: 'POST',
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify({jsonText}),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      setMessage(payload.error ?? 'Import failed');
+  function onSelectFile(event: ChangeEvent<HTMLInputElement>) {
+    const selected = event.target.files?.[0] ?? null;
+    event.currentTarget.value = '';
+    if (!selected) {
       return;
     }
-    setMessage('ノートを更新しました');
+    void upload(selected);
   }
 
   return (
     <div className={styles.box}>
-      <h3>JSONノートを読み込む</h3>
       <input
-        className={styles.textarea}
+        ref={fileInputRef}
+        className={styles.fileInput}
         type='file'
         accept='application/json'
-        onChange={event => setFile(event.target.files?.[0] ?? null)}
+        onChange={onSelectFile}
       />
-      <button className={styles.button} onClick={upload} type='button'>
-        ノートを取り込む
+      <button
+        className={styles.button}
+        onClick={openFilePicker}
+        type='button'
+        disabled={uploading}
+      >
+        {uploading ? '読み込み中...' : 'JSONノートを読み込む'}
       </button>
       {message ? <p>{message}</p> : null}
     </div>

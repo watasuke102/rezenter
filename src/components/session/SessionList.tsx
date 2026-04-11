@@ -46,7 +46,7 @@ export function SessionList({sessions}: Props) {
       {sessions.length === 0 ? <p>まだセッションがありません。</p> : null}
       {sessions.map(session => (
         <div key={session.id} className={styles.sessionItem}>
-          <Link href={`/session/${session.id}`} className={styles.sessionLink}>
+          <div className={styles.sessionMeta}>
             <strong>{session.title}</strong>
             <span>ID: {session.id}</span>
             <span>
@@ -55,8 +55,28 @@ export function SessionList({sessions}: Props) {
             <span>
               {new Date(session.createdAt).toISOString().slice(0, 10)}
             </span>
-          </Link>
+          </div>
           <div className={styles.sessionActions}>
+            <div className={styles.sessionLink}>
+              <Link
+                href={`/session/${session.id}/viewer`}
+                className={styles.pageLink}
+              >
+                Viewer
+              </Link>
+              <Link
+                href={`/session/${session.id}/presenter`}
+                className={styles.pageLink}
+              >
+                Presenter
+              </Link>
+              <Link
+                href={`/session/${session.id}/controller`}
+                className={styles.pageLink}
+              >
+                Controller
+              </Link>
+            </div>
             <button
               type='button'
               className={styles.deleteButton}

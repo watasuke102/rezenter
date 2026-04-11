@@ -110,6 +110,7 @@ export function PresenterScreen({sessionId}: Props) {
 
   return (
     <PresenterPanel
+      sessionId={sessionId}
       pdfSrc={session.pdfSrc}
       currentPage={session.currentPage}
       nextPage={session.currentPage + 1}

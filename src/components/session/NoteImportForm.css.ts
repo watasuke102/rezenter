@@ -2,16 +2,12 @@ import {style} from '@vanilla-extract/css';
 
 export const box = style({
   borderRadius: 2,
-  padding: 18,
   display: 'grid',
+  gap: 10,
 });
 
-export const textarea = style({
-  width: '100%',
-  border: '1px solid #3c4a5c',
-  borderRadius: 2,
-  padding: 10,
-  marginBottom: 16,
+export const fileInput = style({
+  display: 'none',
 });
 
 export const button = style({

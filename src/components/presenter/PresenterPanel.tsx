@@ -2,9 +2,11 @@
 
 import {ChevronLeft, ChevronRight, Pause, Play, RotateCcw} from 'lucide-react';
 import {PdfPageCanvas} from '@/components/pdf/PdfPageCanvas';
+import {NoteImportForm} from '@/components/session/NoteImportForm';
 import * as styles from '@/components/presenter/presenter.css';
 
 type Props = {
+  sessionId: string;
   pdfSrc: string;
   currentPage: number;
   nextPage: number;
@@ -19,6 +21,7 @@ type Props = {
 };
 
 export function PresenterPanel({
+  sessionId,
   pdfSrc,
   currentPage,
   nextPage,
@@ -99,6 +102,7 @@ export function PresenterPanel({
           <h3 className={styles.subTitle}>Note</h3>
           <p className={styles.notes}>{noteText || 'No note for this page.'}</p>
         </div>
+        <NoteImportForm sessionId={sessionId} />
       </section>
     </main>
   );
