@@ -9,7 +9,6 @@ type Props = {
 };
 
 export function PointerControl({sessionId, fullScaleAdjustment}: Props) {
-
   const activePointersRef = useRef(new Map<number, {x: number; y: number}>());
   const pointerActiveRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
@@ -299,106 +298,106 @@ export function PointerControl({sessionId, fullScaleAdjustment}: Props) {
     <div
       className={styles.trackpad}
       onPointerDown={event => {
-          event.currentTarget.setPointerCapture(event.pointerId);
-          activePointersRef.current.set(event.pointerId, {
-            x: event.clientX,
-            y: event.clientY,
-          });
+        event.currentTarget.setPointerCapture(event.pointerId);
+        activePointersRef.current.set(event.pointerId, {
+          x: event.clientX,
+          y: event.clientY,
+        });
 
-          if (activePointersRef.current.size === 1) {
-            if (gestureActiveRef.current) {
-              endGesture();
-            }
-            activePointerIdRef.current = event.pointerId;
-            beginPointer(event.clientX, event.clientY);
-            return;
+        if (activePointersRef.current.size === 1) {
+          if (gestureActiveRef.current) {
+            endGesture();
           }
+          activePointerIdRef.current = event.pointerId;
+          beginPointer(event.clientX, event.clientY);
+          return;
+        }
 
-          if (activePointersRef.current.size === 2) {
+        if (activePointersRef.current.size === 2) {
+          beginGestureFromCurrentPointers();
+        }
+      }}
+      onPointerMove={event => {
+        if (!activePointersRef.current.has(event.pointerId)) {
+          return;
+        }
+
+        activePointersRef.current.set(event.pointerId, {
+          x: event.clientX,
+          y: event.clientY,
+        });
+
+        if (activePointersRef.current.size >= 2) {
+          if (!gestureActiveRef.current) {
             beginGestureFromCurrentPointers();
           }
-        }}
-        onPointerMove={event => {
-          if (!activePointersRef.current.has(event.pointerId)) {
-            return;
-          }
-
-          activePointersRef.current.set(event.pointerId, {
-            x: event.clientX,
-            y: event.clientY,
-          });
-
-          if (activePointersRef.current.size >= 2) {
-            if (!gestureActiveRef.current) {
-              beginGestureFromCurrentPointers();
-            }
-            event.preventDefault();
-            processGestureMove(event.currentTarget);
-            return;
-          }
-
-          if (gestureActiveRef.current) {
-            gestureActiveRef.current = false;
-            syncSinglePointerFromActivePointers();
-          }
-
-          if (event.pointerId !== activePointerIdRef.current) {
-            return;
-          }
-
           event.preventDefault();
-          processMove(event.clientX, event.clientY);
-        }}
-        onPointerUp={event => {
-          activePointersRef.current.delete(event.pointerId);
+          processGestureMove(event.currentTarget);
+          return;
+        }
 
-          if (activePointersRef.current.size >= 2) {
-            const state = getGestureState();
-            if (state) {
-              lastGestureCenterRef.current = {
-                x: state.centerX,
-                y: state.centerY,
-              };
-              lastGestureDistanceRef.current = state.distance;
-            }
-            return;
-          }
+        if (gestureActiveRef.current) {
+          gestureActiveRef.current = false;
+          syncSinglePointerFromActivePointers();
+        }
 
-          if (activePointersRef.current.size === 1) {
-            endGesture();
-            syncSinglePointerFromActivePointers();
-            return;
-          }
+        if (event.pointerId !== activePointerIdRef.current) {
+          return;
+        }
 
-          if (event.pointerId === activePointerIdRef.current) {
-            endPointer();
+        event.preventDefault();
+        processMove(event.clientX, event.clientY);
+      }}
+      onPointerUp={event => {
+        activePointersRef.current.delete(event.pointerId);
+
+        if (activePointersRef.current.size >= 2) {
+          const state = getGestureState();
+          if (state) {
+            lastGestureCenterRef.current = {
+              x: state.centerX,
+              y: state.centerY,
+            };
+            lastGestureDistanceRef.current = state.distance;
           }
+          return;
+        }
+
+        if (activePointersRef.current.size === 1) {
           endGesture();
-        }}
-        onPointerCancel={event => {
-          activePointersRef.current.delete(event.pointerId);
+          syncSinglePointerFromActivePointers();
+          return;
+        }
 
-          if (activePointersRef.current.size === 1) {
-            endGesture();
-            syncSinglePointerFromActivePointers();
-          } else if (activePointersRef.current.size === 0) {
-            endPointer();
-          }
-          endGesture();
-        }}
-        onPointerLeave={event => {
-          if (event.buttons !== 0) {
-            return;
-          }
+        if (event.pointerId === activePointerIdRef.current) {
+          endPointer();
+        }
+        endGesture();
+      }}
+      onPointerCancel={event => {
+        activePointersRef.current.delete(event.pointerId);
 
-          activePointersRef.current.delete(event.pointerId);
-          if (activePointersRef.current.size === 1) {
-            endGesture();
-            syncSinglePointerFromActivePointers();
-          } else if (activePointersRef.current.size === 0) {
-            endPointer();
-          }
+        if (activePointersRef.current.size === 1) {
           endGesture();
+          syncSinglePointerFromActivePointers();
+        } else if (activePointersRef.current.size === 0) {
+          endPointer();
+        }
+        endGesture();
+      }}
+      onPointerLeave={event => {
+        if (event.buttons !== 0) {
+          return;
+        }
+
+        activePointersRef.current.delete(event.pointerId);
+        if (activePointersRef.current.size === 1) {
+          endGesture();
+          syncSinglePointerFromActivePointers();
+        } else if (activePointersRef.current.size === 0) {
+          endPointer();
+        }
+        endGesture();
       }}
     />
   );

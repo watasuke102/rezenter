@@ -200,8 +200,13 @@ export class SqliteSessionRepository implements SessionRepository {
     }
 
     const next = clampPage(row.current_page + 1, row.total_pages);
+    if (next === row.current_page) {
+      return this.fetchSession(sessionId);
+    }
     this.db
-      .prepare(`UPDATE sessions SET current_page = @next WHERE id = @sessionId`)
+      .prepare(
+        `UPDATE sessions SET current_page = @next, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`,
+      )
       .run({next, sessionId});
     return this.fetchSession(sessionId);
   }
@@ -217,23 +222,35 @@ export class SqliteSessionRepository implements SessionRepository {
     }
 
     const prev = clampPage(row.current_page - 1, row.total_pages);
+    if (prev === row.current_page) {
+      return this.fetchSession(sessionId);
+    }
     this.db
-      .prepare(`UPDATE sessions SET current_page = @prev WHERE id = @sessionId`)
+      .prepare(
+        `UPDATE sessions SET current_page = @prev, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`,
+      )
       .run({prev, sessionId});
     return this.fetchSession(sessionId);
   }
 
   setPage(sessionId: string, page: number): SessionRecord | null {
     const row = this.db
-      .prepare(`SELECT total_pages FROM sessions WHERE id = ?`)
-      .get(sessionId) as Pick<SessionRow, 'total_pages'> | undefined;
+      .prepare(`SELECT current_page, total_pages FROM sessions WHERE id = ?`)
+      .get(sessionId) as
+      | Pick<SessionRow, 'current_page' | 'total_pages'>
+      | undefined;
     if (!row) {
       return null;
     }
 
     const target = clampPage(page, row.total_pages);
+    if (target === row.current_page) {
+      return this.fetchSession(sessionId);
+    }
     this.db
-      .prepare(`UPDATE sessions SET current_page = @page WHERE id = @sessionId`)
+      .prepare(
+        `UPDATE sessions SET current_page = @page, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`,
+      )
       .run({sessionId, page: target});
     return this.fetchSession(sessionId);
   }
