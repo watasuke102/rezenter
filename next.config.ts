@@ -7,6 +7,12 @@ const withVanillaExtract = createVanillaExtractPlugin({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  experimental: {
+    proxyClientMaxBodySize: '1gb',
+    serverActions: {
+      bodySizeLimit: '1gb',
+    },
+  },
 };
 
 export default withVanillaExtract(nextConfig);
