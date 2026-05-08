@@ -4,6 +4,7 @@ import * as styles from '@/app/page.css';
 import {getSessionRepository} from '@/lib/repository';
 
 const repo = getSessionRepository();
+export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const sessions = repo.list();

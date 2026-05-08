@@ -35,7 +35,6 @@ export function CreateSessionForm() {
         return;
       }
 
-      router.push(`/session/${id}`);
       router.refresh();
     } catch {
       setError('Network error while creating session');
