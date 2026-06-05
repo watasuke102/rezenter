@@ -4,6 +4,8 @@ export const primary: string;
 export const secondary: string;
 export const normal: string;
 export const pointer: string;
+export const controlsPanel: string;
 export const controls: string;
+export const scaleResetToggle: string;
 export const speedSlider: string;
 export const speedValue: string;

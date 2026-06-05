@@ -43,6 +43,12 @@ export const pointer = style({
   gap: 48,
 });
 
+export const controlsPanel = style({
+  display: 'grid',
+  gridTemplateRows: 'auto auto',
+  gap: 8,
+});
+
 export const controls = style({
   display: 'grid',
   gridTemplateColumns: 'auto 1fr auto auto',
@@ -50,6 +56,13 @@ export const controls = style({
   alignItems: 'center',
   marginInline: 12,
   color: '#abb2bf',
+});
+
+export const scaleResetToggle = style({
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  marginInline: 12,
 });
 
 const thumbRule: ComplexStyleRule = {

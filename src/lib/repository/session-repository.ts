@@ -15,17 +15,29 @@ export type CreateSessionInput = {
   notes?: NoteEntry[];
 };
 
+export type PageChangeOptions = {
+  resetScale?: boolean;
+};
+
 export interface SessionRepository {
   list(): SessionSummary[];
   create(input: CreateSessionInput): SessionRecord;
   findById(sessionId: string): SessionWithNotes | null;
   delete(sessionId: string): boolean;
   replaceNotes(sessionId: string, notes: NoteEntry[]): void;
-  nextPage(sessionId: string): SessionRecord | null;
-  prevPage(sessionId: string): SessionRecord | null;
-  setPage(sessionId: string, page: number): SessionRecord | null;
+  nextPage(sessionId: string, options?: PageChangeOptions): SessionRecord | null;
+  prevPage(sessionId: string, options?: PageChangeOptions): SessionRecord | null;
+  setPage(
+    sessionId: string,
+    page: number,
+    options?: PageChangeOptions,
+  ): SessionRecord | null;
   setTimerRunning(sessionId: string, running: boolean): SessionRecord | null;
   resetTimer(sessionId: string): SessionRecord | null;
+  setDisableScaleResetOnPageChange(
+    sessionId: string,
+    disable: boolean,
+  ): SessionRecord | null;
   updatePointer(sessionId: string, x: number, y: number): SessionRecord | null;
   updateViewerTransform(
     sessionId: string,

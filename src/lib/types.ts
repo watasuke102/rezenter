@@ -23,6 +23,7 @@ export type SessionRecord = {
   viewerScale: number;
   viewerOffsetX: number;
   viewerOffsetY: number;
+  disableScaleResetOnPageChange: boolean;
 };
 
 export type SessionWithNotes = SessionRecord & {

@@ -2,6 +2,7 @@ import {NextResponse} from 'next/server';
 import fs from 'node:fs/promises';
 import {getSessionRepository} from '@/lib/repository';
 import {toClientSession} from '@/lib/session-json';
+import {publishSessionUpdate} from '@/lib/session-events';
 
 const repo = getSessionRepository();
 
@@ -15,6 +16,37 @@ export async function GET(_: Request, {params}: Params) {
   }
 
   return NextResponse.json({session: toClientSession(session)});
+}
+
+export async function PATCH(request: Request, {params}: Params) {
+  const {id} = await params;
+  const payload = (await request.json()) as {
+    disableScaleResetOnPageChange?: boolean;
+  };
+
+  if (typeof payload.disableScaleResetOnPageChange !== 'boolean') {
+    return NextResponse.json(
+      {error: 'disableScaleResetOnPageChange must be a boolean'},
+      {status: 400},
+    );
+  }
+
+  const updated = repo.setDisableScaleResetOnPageChange(
+    id,
+    payload.disableScaleResetOnPageChange,
+  );
+  if (!updated) {
+    return NextResponse.json({error: 'Session not found'}, {status: 404});
+  }
+
+  const sessionWithNotes = repo.findById(id);
+  if (!sessionWithNotes) {
+    return NextResponse.json({error: 'Session not found'}, {status: 404});
+  }
+
+  const session = toClientSession(sessionWithNotes);
+  publishSessionUpdate(id, session);
+  return NextResponse.json({session});
 }
 
 export async function DELETE(_: Request, {params}: Params) {

@@ -12,15 +12,20 @@ export async function POST(request: Request, {params}: Params) {
   const payload = (await request.json()) as {
     action?: 'next' | 'prev' | 'set';
     page?: number;
+    resetScale?: boolean;
   };
+  const options =
+    typeof payload.resetScale === 'boolean'
+      ? {resetScale: payload.resetScale}
+      : undefined;
 
   let session = null;
   if (payload.action === 'prev') {
-    session = repo.prevPage(id);
+    session = repo.prevPage(id, options);
   } else if (payload.action === 'set') {
-    session = repo.setPage(id, Number(payload.page ?? 0));
+    session = repo.setPage(id, Number(payload.page ?? 0), options);
   } else {
-    session = repo.nextPage(id);
+    session = repo.nextPage(id, options);
   }
 
   if (!session) {

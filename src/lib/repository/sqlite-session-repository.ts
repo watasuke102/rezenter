@@ -11,6 +11,7 @@ import type {
 } from '@/lib/types';
 import type {
   CreateSessionInput,
+  PageChangeOptions,
   SessionRepository,
 } from '@/lib/repository/session-repository';
 
@@ -32,6 +33,7 @@ type SessionRow = {
   viewer_scale: number;
   viewer_offset_x: number;
   viewer_offset_y: number;
+  disable_scale_reset_on_page_change: number;
 };
 
 function clampPage(page: number, totalPages: number | null): number {
@@ -62,6 +64,8 @@ function mapSession(row: SessionRow): SessionRecord {
     viewerScale: row.viewer_scale,
     viewerOffsetX: row.viewer_offset_x,
     viewerOffsetY: row.viewer_offset_y,
+    disableScaleResetOnPageChange:
+      row.disable_scale_reset_on_page_change === 1,
   };
 }
 
@@ -116,10 +120,11 @@ export class SqliteSessionRepository implements SessionRepository {
       .prepare(
         `INSERT INTO sessions (
           id, title, source_type, pdf_path, pdf_url, created_at, total_pages,
-          viewer_scale, viewer_offset_x, viewer_offset_y
+          viewer_scale, viewer_offset_x, viewer_offset_y,
+          disable_scale_reset_on_page_change
         ) VALUES (
           @id, @title, @sourceType, @pdfPath, @pdfUrl, @createdAt, @totalPages,
-          @viewerScale, @viewerOffsetX, @viewerOffsetY
+          @viewerScale, @viewerOffsetX, @viewerOffsetY, @disableScaleReset
         )`,
       )
       .run({
@@ -133,6 +138,7 @@ export class SqliteSessionRepository implements SessionRepository {
         viewerScale: 1,
         viewerOffsetX: 0,
         viewerOffsetY: 0,
+        disableScaleReset: 0,
       });
 
     if (input.notes && input.notes.length > 0) {
@@ -189,11 +195,21 @@ export class SqliteSessionRepository implements SessionRepository {
     tx(notes);
   }
 
-  nextPage(sessionId: string): SessionRecord | null {
+  nextPage(
+    sessionId: string,
+    options?: PageChangeOptions,
+  ): SessionRecord | null {
     const row = this.db
-      .prepare(`SELECT current_page, total_pages FROM sessions WHERE id = ?`)
+      .prepare(
+        `SELECT current_page, total_pages, disable_scale_reset_on_page_change FROM sessions WHERE id = ?`,
+      )
       .get(sessionId) as
-      | Pick<SessionRow, 'current_page' | 'total_pages'>
+      | Pick<
+          SessionRow,
+          | 'current_page'
+          | 'total_pages'
+          | 'disable_scale_reset_on_page_change'
+        >
       | undefined;
     if (!row) {
       return null;
@@ -203,19 +219,34 @@ export class SqliteSessionRepository implements SessionRepository {
     if (next === row.current_page) {
       return this.fetchSession(sessionId);
     }
+    const resetScale =
+      options?.resetScale ??
+      row.disable_scale_reset_on_page_change !== 1;
     this.db
       .prepare(
-        `UPDATE sessions SET current_page = @next, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`,
+        resetScale
+          ? `UPDATE sessions SET current_page = @next, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`
+          : `UPDATE sessions SET current_page = @next WHERE id = @sessionId`,
       )
       .run({next, sessionId});
     return this.fetchSession(sessionId);
   }
 
-  prevPage(sessionId: string): SessionRecord | null {
+  prevPage(
+    sessionId: string,
+    options?: PageChangeOptions,
+  ): SessionRecord | null {
     const row = this.db
-      .prepare(`SELECT current_page, total_pages FROM sessions WHERE id = ?`)
+      .prepare(
+        `SELECT current_page, total_pages, disable_scale_reset_on_page_change FROM sessions WHERE id = ?`,
+      )
       .get(sessionId) as
-      | Pick<SessionRow, 'current_page' | 'total_pages'>
+      | Pick<
+          SessionRow,
+          | 'current_page'
+          | 'total_pages'
+          | 'disable_scale_reset_on_page_change'
+        >
       | undefined;
     if (!row) {
       return null;
@@ -225,19 +256,35 @@ export class SqliteSessionRepository implements SessionRepository {
     if (prev === row.current_page) {
       return this.fetchSession(sessionId);
     }
+    const resetScale =
+      options?.resetScale ??
+      row.disable_scale_reset_on_page_change !== 1;
     this.db
       .prepare(
-        `UPDATE sessions SET current_page = @prev, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`,
+        resetScale
+          ? `UPDATE sessions SET current_page = @prev, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`
+          : `UPDATE sessions SET current_page = @prev WHERE id = @sessionId`,
       )
       .run({prev, sessionId});
     return this.fetchSession(sessionId);
   }
 
-  setPage(sessionId: string, page: number): SessionRecord | null {
+  setPage(
+    sessionId: string,
+    page: number,
+    options?: PageChangeOptions,
+  ): SessionRecord | null {
     const row = this.db
-      .prepare(`SELECT current_page, total_pages FROM sessions WHERE id = ?`)
+      .prepare(
+        `SELECT current_page, total_pages, disable_scale_reset_on_page_change FROM sessions WHERE id = ?`,
+      )
       .get(sessionId) as
-      | Pick<SessionRow, 'current_page' | 'total_pages'>
+      | Pick<
+          SessionRow,
+          | 'current_page'
+          | 'total_pages'
+          | 'disable_scale_reset_on_page_change'
+        >
       | undefined;
     if (!row) {
       return null;
@@ -247,9 +294,14 @@ export class SqliteSessionRepository implements SessionRepository {
     if (target === row.current_page) {
       return this.fetchSession(sessionId);
     }
+    const resetScale =
+      options?.resetScale ??
+      row.disable_scale_reset_on_page_change !== 1;
     this.db
       .prepare(
-        `UPDATE sessions SET current_page = @page, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`,
+        resetScale
+          ? `UPDATE sessions SET current_page = @page, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`
+          : `UPDATE sessions SET current_page = @page WHERE id = @sessionId`,
       )
       .run({sessionId, page: target});
     return this.fetchSession(sessionId);
@@ -293,6 +345,20 @@ export class SqliteSessionRepository implements SessionRepository {
         `UPDATE sessions SET timer_elapsed_ms = 0, timer_running = 0, timer_started_at = NULL WHERE id = ?`,
       )
       .run(sessionId);
+    return this.fetchSession(sessionId);
+  }
+
+  setDisableScaleResetOnPageChange(
+    sessionId: string,
+    disable: boolean,
+  ): SessionRecord | null {
+    this.db
+      .prepare(
+        `UPDATE sessions
+         SET disable_scale_reset_on_page_change = @disable
+         WHERE id = @sessionId`,
+      )
+      .run({sessionId, disable: disable ? 1 : 0});
     return this.fetchSession(sessionId);
   }
 

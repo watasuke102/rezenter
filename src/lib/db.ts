@@ -28,7 +28,8 @@ function initSchema(db: Database.Database) {
       pointer_updated_at INTEGER,
       viewer_scale REAL NOT NULL DEFAULT 1,
       viewer_offset_x REAL NOT NULL DEFAULT 0,
-      viewer_offset_y REAL NOT NULL DEFAULT 0
+      viewer_offset_y REAL NOT NULL DEFAULT 0,
+      disable_scale_reset_on_page_change INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS notes (
@@ -63,6 +64,13 @@ function initSchema(db: Database.Database) {
   if (!columns.has('viewer_offset_y')) {
     db.prepare(
       `ALTER TABLE sessions ADD COLUMN viewer_offset_y REAL NOT NULL DEFAULT 0`,
+    ).run();
+  }
+
+  if (!columns.has('disable_scale_reset_on_page_change')) {
+    db.prepare(
+      `ALTER TABLE sessions
+       ADD COLUMN disable_scale_reset_on_page_change INTEGER NOT NULL DEFAULT 0`,
     ).run();
   }
 }
