@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 import * as styles from '@/components/session/SessionList.css';
+import {SettingsModal} from '@/components/session/SettingsModal';
 import type {SessionSummary} from '@/lib/types';
 
 type Props = {
@@ -41,8 +42,18 @@ export function SessionList({sessions}: Props) {
     }
   }
 
+  const [settingsSessionId, setSettingsSessionId] = useState<string | null>(null);
+
   return (
     <div className={styles.sessions}>
+      {settingsSessionId && (
+        <SettingsModal
+          sessionId={settingsSessionId}
+          isOpen={true}
+          onClose={() => setSettingsSessionId(null)}
+        />
+      )}
+
       {sessions.length === 0 ? <p>まだセッションがありません。</p> : null}
       {sessions.map(session => (
         <div key={session.id} className={styles.sessionItem}>
@@ -76,6 +87,13 @@ export function SessionList({sessions}: Props) {
               >
                 Controller
               </Link>
+              <button
+                type='button'
+                className={styles.pageLink}
+                onClick={() => setSettingsSessionId(session.id)}
+              >
+                表示設定
+              </button>
             </div>
             <button
               type='button'

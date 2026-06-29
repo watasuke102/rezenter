@@ -26,7 +26,7 @@ type CachedPage = {
 
 const pageCache = new Map<string, Promise<CachedPage>>();
 
-async function getDocument(src: string) {
+export async function getDocument(src: string) {
   const cached = documentCache.get(src);
   if (cached) {
     return cached;
@@ -86,7 +86,7 @@ async function renderPageToCanvas(src: string, page: number) {
   return {canvas, width: viewport.width, height: viewport.height};
 }
 
-async function getRenderedPage(src: string, page: number) {
+export async function getRenderedPage(src: string, page: number) {
   const cacheKey = getPageCacheKey(src, page);
   const cached = pageCache.get(cacheKey);
   if (cached) {
@@ -102,7 +102,7 @@ async function getRenderedPage(src: string, page: number) {
   return renderPromise;
 }
 
-async function preloadRenderedPages(src: string) {
+export async function preloadRenderedPages(src: string) {
   const pdf = await getDocument(src);
   await Promise.all(
     Array.from({length: pdf.numPages}, (_, index) =>

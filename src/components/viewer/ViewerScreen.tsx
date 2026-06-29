@@ -2,8 +2,10 @@
 
 import {useEffect, useRef, useState} from 'react';
 import {PdfPageCanvas} from '@/components/pdf/PdfPageCanvas';
+import {PdfConcatenatedCanvas} from '@/components/pdf/PdfConcatenatedCanvas';
 import type {ClientSession} from '@/lib/client-types';
 import * as styles from '@/components/viewer/viewer.css';
+import {useViewerSettings} from '@/lib/useViewerSettings';
 
 type Props = {
   sessionId: string;
@@ -11,6 +13,7 @@ type Props = {
 };
 
 export function ViewerScreen({sessionId, initialSession}: Props) {
+  const {settings, isLoaded} = useViewerSettings(sessionId);
   const [session, setSession] = useState<ClientSession | null>(initialSession);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const lastPointerUpdatedAtRef = useRef<number | null>(
@@ -176,6 +179,24 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
   const isPointerVisible =
     session.pointerUpdatedAt !== null &&
     Math.max(0, nowMs - session.pointerUpdatedAt) < 2000;
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  if (settings.concatenatedMode) {
+    return (
+      <main className={styles.page} style={{ overflowY: 'auto' }}>
+        <PdfConcatenatedCanvas
+          src={session.pdfSrc}
+          marginTop={settings.marginTop}
+          marginBottom={settings.marginBottom}
+          marginLeft={settings.marginLeft}
+          marginRight={settings.marginRight}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className={styles.page}>

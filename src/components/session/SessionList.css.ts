@@ -47,6 +47,7 @@ export const pageLink = style({
   padding: '6px 10px',
   lineHeight: 1,
   textDecoration: 'none',
+  cursor: 'pointer',
 });
 
 export const deleteButton = style({
