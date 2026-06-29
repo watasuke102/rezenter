@@ -46,14 +46,14 @@ export const checkboxLabel = style({
 export const inputGroup = style({
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
-  gap: '12px',
+  gap: '4px 8pt',
 });
 
 export const numberInput = style({
   backgroundColor: '#1e2227',
   border: '1px solid #abb2bf',
   color: '#abb2bf',
-  marginTop: 4,
+  marginTop: 6,
   padding: 8,
   borderRadius: '4px',
   width: '100%',
@@ -72,6 +72,54 @@ export const closeButton = style({
   color: '#282c34',
   border: 'none',
   padding: '8px 16px',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontWeight: 'bold',
+});
+
+export const presetContainer = style({
+  display: 'grid',
+  gap: '4px 8px',
+  gridTemplateColumns: '1fr auto',
+  marginTop: '4px',
+});
+
+export const presetSelect = style({
+  flex: 1,
+  backgroundColor: '#1e2227',
+  border: '1px solid #abb2bf',
+  color: '#abb2bf',
+  padding: '6px',
+  borderRadius: '4px',
+});
+
+export const presetInput = style({
+  flex: 1,
+  backgroundColor: '#1e2227',
+  border: '1px solid #abb2bf',
+  color: '#abb2bf',
+  padding: '6px',
+  borderRadius: '4px',
+});
+
+export const presetButton = style({
+  backgroundColor: '#3e4451',
+  color: '#abb2bf',
+  padding: '6px 12px',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontWeight: 'bold',
+  ':disabled': {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+});
+
+export const presetDeleteButton = style({
+  backgroundColor: '#e06c75',
+  color: '#282c34',
+  border: 'none',
+  padding: '6px 12px',
   borderRadius: '4px',
   cursor: 'pointer',
   fontWeight: 'bold',

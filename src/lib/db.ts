@@ -41,6 +41,14 @@ function initSchema(db: Database.Database) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_notes_session_id ON notes(session_id);
+
+    CREATE TABLE IF NOT EXISTS margin_presets (
+      name TEXT PRIMARY KEY,
+      margin_top INTEGER NOT NULL,
+      margin_bottom INTEGER NOT NULL,
+      margin_left INTEGER NOT NULL,
+      margin_right INTEGER NOT NULL
+    );
   `);
 
   const columns = new Set(

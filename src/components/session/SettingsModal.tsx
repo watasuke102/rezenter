@@ -1,6 +1,8 @@
 'use client';
 
 import {useViewerSettings} from '@/lib/useViewerSettings';
+import {useMarginPresets} from '@/lib/useMarginPresets';
+import {useState} from 'react';
 import * as styles from './SettingsModal.css';
 
 type Props = {
@@ -11,8 +13,39 @@ type Props = {
 
 export function SettingsModal({sessionId, isOpen, onClose}: Props) {
   const {settings, updateSettings, isLoaded} = useViewerSettings(sessionId);
+  const {
+    presets,
+    savePreset,
+    deletePreset,
+    isLoaded: presetsLoaded,
+  } = useMarginPresets();
+  const [newPresetName, setNewPresetName] = useState('');
+  const [selectedPresetName, setSelectedPresetName] = useState('');
 
-  if (!isOpen || !isLoaded) return null;
+  if (!isOpen || !isLoaded || !presetsLoaded) return null;
+
+  const handleSavePreset = () => {
+    if (!newPresetName.trim()) return;
+    savePreset({
+      name: newPresetName.trim(),
+      marginTop: settings.marginTop,
+      marginBottom: settings.marginBottom,
+      marginLeft: settings.marginLeft,
+      marginRight: settings.marginRight,
+    });
+    setNewPresetName('');
+  };
+
+  const handleLoadPreset = () => {
+    const p = presets.find(p => p.name === selectedPresetName);
+    if (!p) return;
+    updateSettings({
+      marginTop: p.marginTop,
+      marginBottom: p.marginBottom,
+      marginLeft: p.marginLeft,
+      marginRight: p.marginRight,
+    });
+  };
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -83,6 +116,47 @@ export function SettingsModal({sessionId, isOpen, onClose}: Props) {
                 }
               />
             </label>
+          </div>
+        </div>
+
+        <div className={styles.field}>
+          <span>プリセット</span>
+          <div className={styles.presetContainer}>
+            <select
+              className={styles.presetSelect}
+              value={selectedPresetName}
+              onChange={e => setSelectedPresetName(e.target.value)}
+            >
+              <option value=''>プリセットを選択...</option>
+              {presets.map(p => (
+                <option key={p.name} value={p.name}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type='button'
+              className={styles.presetButton}
+              disabled={!selectedPresetName}
+              onClick={handleLoadPreset}
+            >
+              呼び出し
+            </button>
+            <input
+              type='text'
+              className={styles.presetInput}
+              placeholder='プリセット名'
+              value={newPresetName}
+              onChange={e => setNewPresetName(e.target.value)}
+            />
+            <button
+              type='button'
+              className={styles.presetButton}
+              disabled={!newPresetName.trim()}
+              onClick={handleSavePreset}
+            >
+              保存
+            </button>
           </div>
         </div>
 
