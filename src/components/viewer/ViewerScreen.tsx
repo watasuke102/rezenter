@@ -122,29 +122,49 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     const containerWidth = viewportSize.width;
     const containerHeight = viewportSize.height;
     const containerAspect = containerWidth / containerHeight;
-    const baseWidth =
-      containerAspect > pdfAspect
-        ? containerHeight * pdfAspect
-        : containerWidth;
-    const baseHeight =
-      containerAspect > pdfAspect
-        ? containerHeight
-        : containerWidth / pdfAspect;
+    let baseWidth: number;
+    let baseHeight: number;
+    if (settings.concatenatedMode) {
+      baseWidth = containerWidth;
+      baseHeight = containerWidth / pdfAspect;
+    } else {
+      baseWidth =
+        containerAspect > pdfAspect
+          ? containerHeight * pdfAspect
+          : containerWidth;
+      baseHeight =
+        containerAspect > pdfAspect
+          ? containerHeight
+          : containerWidth / pdfAspect;
+    }
+
     const scale = Math.max(1, session.viewerScale);
-    const offsetX = Math.max(
-      -VIEWER_OFFSET_LIMIT,
-      Math.min(VIEWER_OFFSET_LIMIT, session.viewerOffsetX),
-    );
-    const offsetY = Math.max(
-      -VIEWER_OFFSET_LIMIT,
-      Math.min(VIEWER_OFFSET_LIMIT, session.viewerOffsetY),
-    );
     const width = baseWidth * scale;
     const height = baseHeight * scale;
     const rangeX = Math.max(0, width - containerWidth) / 2;
     const rangeY = Math.max(0, height - containerHeight) / 2;
-    const centerX = containerWidth / 2 + offsetX * rangeX;
-    const centerY = containerHeight / 2 + offsetY * rangeY;
+
+    let actualOffsetX: number;
+    let actualOffsetY: number;
+
+    if (settings.concatenatedMode) {
+      actualOffsetX = Math.max(-rangeX, Math.min(rangeX, session.viewerOffsetX * containerWidth));
+      actualOffsetY = Math.max(-rangeY, Math.min(rangeY, rangeY + session.viewerOffsetY * containerHeight));
+    } else {
+      const offsetX = Math.max(
+        -VIEWER_OFFSET_LIMIT,
+        Math.min(VIEWER_OFFSET_LIMIT, session.viewerOffsetX),
+      );
+      const offsetY = Math.max(
+        -VIEWER_OFFSET_LIMIT,
+        Math.min(VIEWER_OFFSET_LIMIT, session.viewerOffsetY),
+      );
+      actualOffsetX = offsetX * rangeX;
+      actualOffsetY = offsetY * rangeY;
+    }
+
+    const centerX = containerWidth / 2 + actualOffsetX;
+    const centerY = containerHeight / 2 + actualOffsetY;
 
     return {
       left: centerX - width / 2,
@@ -186,13 +206,24 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
 
   if (settings.concatenatedMode) {
     return (
-      <main className={styles.page} style={{ overflowY: 'auto' }}>
+      <main className={styles.page}>
         <PdfConcatenatedCanvas
           src={session.pdfSrc}
           marginTop={settings.marginTop}
           marginBottom={settings.marginBottom}
           marginLeft={settings.marginLeft}
           marginRight={settings.marginRight}
+          className={styles.slide}
+          style={slideStyle}
+          onViewportChange={setPdfViewport}
+        />
+        <div
+          className={styles.pointer}
+          style={{
+            left: `${pointerRect?.left ?? viewportSize.width / 2}px`,
+            top: `${pointerRect?.top ?? viewportSize.height / 2}px`,
+            opacity: isPointerVisible ? 1 : 0,
+          }}
         />
       </main>
     );

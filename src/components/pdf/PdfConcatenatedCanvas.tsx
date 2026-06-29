@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useRef} from 'react';
 import {getDocument, getRenderedPage} from './PdfPageCanvas';
 
 type Props = {
@@ -10,6 +10,8 @@ type Props = {
   marginLeft: number;
   marginRight: number;
   className?: string;
+  style?: React.CSSProperties;
+  onViewportChange?: (viewport: {width: number; height: number}) => void;
 };
 
 export function PdfConcatenatedCanvas({
@@ -19,6 +21,8 @@ export function PdfConcatenatedCanvas({
   marginLeft,
   marginRight,
   className,
+  style,
+  onViewportChange,
 }: Props) {
   const [pages, setPages] = useState<{canvas: HTMLCanvasElement; width: number; height: number}[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +57,29 @@ export function PdfConcatenatedCanvas({
     };
   }, [src]);
 
+  useEffect(() => {
+    if (pages.length > 0 && onViewportChange) {
+      const scale = 2; // Fixed scale from PdfPageCanvas
+      let totalWidth = 0;
+      let totalHeight = 0;
+      
+      pages.forEach(page => {
+        const originalWidth = page.width;
+        const originalHeight = page.height;
+        const mTop = marginTop * scale;
+        const mBottom = marginBottom * scale;
+        const mLeft = marginLeft * scale;
+        const mRight = marginRight * scale;
+        const croppedWidth = Math.max(0, originalWidth - mLeft - mRight) / scale;
+        const croppedHeight = Math.max(0, originalHeight - mTop - mBottom) / scale;
+        
+        totalWidth = Math.max(totalWidth, croppedWidth);
+        totalHeight += croppedHeight;
+      });
+      onViewportChange({width: totalWidth, height: totalHeight});
+    }
+  }, [pages, marginTop, marginBottom, marginLeft, marginRight, onViewportChange]);
+
   if (loading) {
     return <div style={{ color: 'white', padding: '20px' }}>Loading concatenated PDF...</div>;
   }
@@ -62,13 +89,9 @@ export function PdfConcatenatedCanvas({
   }
 
   return (
-    <div className={className} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div className={className} style={{ ...style, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       {pages.map((page, index) => {
-        const scale = 2; // Fixed scale from PdfPageCanvas
-        // Since the canvas is drawn at scale 2, CSS size should be the original unscaled size.
-        // Wait, if canvas intrinsic width is viewport.width (scaled by 2), we can just set CSS width to viewport.width / 2, or keep it 1:1 if we want it large.
-        // Let's assume the margins are in the same coordinate space as the canvas' CSS width (which defaults to intrinsic width if not specified).
-        // For simplicity, let's say the user margins are in unscaled px. So we multiply by 2 for cropping the scaled canvas.
+        const scale = 2;
         const originalWidth = page.width;
         const originalHeight = page.height;
         
@@ -81,31 +104,73 @@ export function PdfConcatenatedCanvas({
         const croppedHeight = Math.max(0, originalHeight - mTop - mBottom);
 
         return (
-          <div
+          <CroppedCanvasPage
             key={index}
-            style={{
-              overflow: 'hidden',
-              width: `${croppedWidth / scale}px`,
-              height: `${croppedHeight / scale}px`,
-              position: 'relative',
-              backgroundColor: 'white',
-            }}
-          >
-            <img
-              src={page.canvas.toDataURL()}
-              alt={`Page ${index + 1}`}
-              style={{
-                position: 'absolute',
-                top: `-${mTop / scale}px`,
-                left: `-${mLeft / scale}px`,
-                width: `${originalWidth / scale}px`,
-                height: `${originalHeight / scale}px`,
-                maxWidth: 'none',
-              }}
-            />
-          </div>
+            pageCanvas={page.canvas}
+            mTop={mTop}
+            mLeft={mLeft}
+            croppedWidth={croppedWidth}
+            croppedHeight={croppedHeight}
+          />
         );
       })}
+    </div>
+  );
+}
+
+function CroppedCanvasPage({
+  pageCanvas,
+  mTop,
+  mLeft,
+  croppedWidth,
+  croppedHeight,
+}: {
+  pageCanvas: HTMLCanvasElement;
+  mTop: number;
+  mLeft: number;
+  croppedWidth: number;
+  croppedHeight: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = croppedWidth;
+    canvas.height = croppedHeight;
+    ctx.clearRect(0, 0, croppedWidth, croppedHeight);
+    ctx.drawImage(
+      pageCanvas,
+      mLeft,
+      mTop,
+      croppedWidth,
+      croppedHeight,
+      0,
+      0,
+      croppedWidth,
+      croppedHeight
+    );
+  }, [pageCanvas, mLeft, mTop, croppedWidth, croppedHeight]);
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        aspectRatio: `${croppedWidth} / ${croppedHeight}`,
+        backgroundColor: 'white',
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'block',
+        }}
+      />
     </div>
   );
 }

@@ -392,16 +392,8 @@ export class SqliteSessionRepository implements SessionRepository {
     const safeOffsetDeltaX = Number.isFinite(offsetDeltaX) ? offsetDeltaX : 0;
     const safeOffsetDeltaY = Number.isFinite(offsetDeltaY) ? offsetDeltaY : 0;
     const nextScale = Math.max(1, row.viewer_scale * safeMultiplier);
-    const nextOffsetX = clampValue(
-      row.viewer_offset_x + safeOffsetDeltaX,
-      -0.999,
-      0.999,
-    );
-    const nextOffsetY = clampValue(
-      row.viewer_offset_y + safeOffsetDeltaY,
-      -0.999,
-      0.999,
-    );
+    const nextOffsetX = row.viewer_offset_x + safeOffsetDeltaX;
+    const nextOffsetY = row.viewer_offset_y + safeOffsetDeltaY;
 
     if (
       nextScale === row.viewer_scale &&
