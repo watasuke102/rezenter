@@ -34,7 +34,7 @@ export function PointerControl({
   const lastGestureSentAtRef = useRef(0);
 
   const SEND_INTERVAL_MS = 20;
-  const BASE_FULL_SCALE_SPEED_PX_PER_SEC = 14000;
+  const BASE_FULL_SCALE_SPEED_PX_PER_SEC = 7000;
   const DEAD_ZONE_SPEED_PX_PER_SEC = 20;
   const PAGE_PAN_SPEED_MULTIPLIER = 3.1;
 
