@@ -3,6 +3,7 @@
 import {useEffect, useState} from 'react';
 import {PointerControl} from '@/components/controller/PointerControl';
 import * as styles from '@/components/controller/ControllerScreen.css';
+import {useViewerSettings} from '@/lib/useViewerSettings';
 
 type Props = {
   sessionId: string;
@@ -12,6 +13,9 @@ export function ControllerScreen({sessionId}: Props) {
   const [pointerMode, setPointerMode] = useState(false);
   const [fullScaleAdjustment, setFullScaleAdjustment] = useState(0);
   const [disableScaleReset, setDisableScaleReset] = useState(false);
+  const [pdfImageSize, setPdfImageSize] = useState<{width: number; height: number} | null>(null);
+
+  const {settings} = useViewerSettings(sessionId);
 
   useEffect(() => {
     let cancelled = false;
@@ -25,13 +29,30 @@ export function ControllerScreen({sessionId}: Props) {
           return;
         }
         const payload = (await response.json()) as {
-          session?: {disableScaleResetOnPageChange?: boolean};
+          session?: {
+            disableScaleResetOnPageChange?: boolean;
+            pdfSrc?: string;
+            totalPages?: number;
+          };
         };
-        if (
-          !cancelled &&
-          typeof payload.session?.disableScaleResetOnPageChange === 'boolean'
-        ) {
+        
+        if (cancelled || !payload.session) {
+          return;
+        }
+        
+        if (typeof payload.session.disableScaleResetOnPageChange === 'boolean') {
           setDisableScaleReset(payload.session.disableScaleResetOnPageChange);
+        }
+
+        if (payload.session.pdfSrc) {
+          const { getDocument, getRenderedPage } = await import('@/components/pdf/PdfPageCanvas');
+          const pdf = await getDocument(payload.session.pdfSrc);
+          const page = await getRenderedPage(payload.session.pdfSrc, 1);
+          const totalPages = payload.session.totalPages || 1;
+          setPdfImageSize({
+            width: page.width,
+            height: page.height * (settings.concatenatedMode ? totalPages : 1),
+          });
         }
       } catch {
         // ignore transient load failures
@@ -42,7 +63,7 @@ export function ControllerScreen({sessionId}: Props) {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, settings.concatenatedMode]);
 
   async function setScaleResetDisabled(disable: boolean) {
     const previous = disableScaleReset;
@@ -122,6 +143,7 @@ export function ControllerScreen({sessionId}: Props) {
           <PointerControl
             sessionId={sessionId}
             fullScaleAdjustment={fullScaleAdjustment}
+            pdfImageSize={pdfImageSize}
           />
         </div>
       )}

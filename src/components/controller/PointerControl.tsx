@@ -6,9 +6,14 @@ import * as styles from '@/components/controller/PointerControl.css';
 type Props = {
   sessionId: string;
   fullScaleAdjustment: number;
+  pdfImageSize?: {width: number; height: number} | null;
 };
 
-export function PointerControl({sessionId, fullScaleAdjustment}: Props) {
+export function PointerControl({
+  sessionId,
+  fullScaleAdjustment,
+  pdfImageSize,
+}: Props) {
   const activePointersRef = useRef(new Map<number, {x: number; y: number}>());
   const pointerActiveRef = useRef(false);
   const activePointerIdRef = useRef<number | null>(null);
@@ -177,8 +182,20 @@ export function PointerControl({sessionId, fullScaleAdjustment}: Props) {
     }
 
     const fullScaleSpeed = getFullScaleSpeedPxPerSec();
-    const dx = clamp(speedX / fullScaleSpeed, -1, 1);
-    const dy = clamp(speedY / fullScaleSpeed, -1, 1);
+    let dx = speedX / fullScaleSpeed;
+    let dy = speedY / fullScaleSpeed;
+
+    if (pdfImageSize) {
+      const aspect = pdfImageSize.width / pdfImageSize.height;
+      if (aspect < 1) {
+        dy *= aspect;
+      } else {
+        dx /= aspect;
+      }
+    }
+
+    dx = clamp(dx, -1, 1);
+    dy = clamp(dy, -1, 1);
 
     if (now - lastSentAtRef.current < SEND_INTERVAL_MS) {
       return;

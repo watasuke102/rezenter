@@ -29,7 +29,8 @@ function initSchema(db: Database.Database) {
       viewer_scale REAL NOT NULL DEFAULT 1,
       viewer_offset_x REAL NOT NULL DEFAULT 0,
       viewer_offset_y REAL NOT NULL DEFAULT 0,
-      disable_scale_reset_on_page_change INTEGER NOT NULL DEFAULT 0
+      disable_scale_reset_on_page_change INTEGER NOT NULL DEFAULT 0,
+      viewer_settings TEXT
     );
 
     CREATE TABLE IF NOT EXISTS notes (
@@ -79,6 +80,12 @@ function initSchema(db: Database.Database) {
     db.prepare(
       `ALTER TABLE sessions
        ADD COLUMN disable_scale_reset_on_page_change INTEGER NOT NULL DEFAULT 0`,
+    ).run();
+  }
+
+  if (!columns.has('viewer_settings')) {
+    db.prepare(
+      `ALTER TABLE sessions ADD COLUMN viewer_settings TEXT`,
     ).run();
   }
 }

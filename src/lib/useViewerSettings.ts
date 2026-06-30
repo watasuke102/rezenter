@@ -23,23 +23,51 @@ export function useViewerSettings(sessionId: string) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(`rezenter_viewerSettings_${sessionId}`);
-    if (saved) {
+    let cancelled = false;
+    async function load() {
       try {
-        setSettings({...defaultSettings, ...JSON.parse(saved)});
-      } catch {}
-    } else {
-      setSettings(defaultSettings);
+        const res = await fetch(`/api/sessions/${sessionId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.session?.viewerSettings) {
+          setSettings({...defaultSettings, ...data.session.viewerSettings});
+        }
+      } catch (err) {
+        // Ignore
+      } finally {
+        setIsLoaded(true);
+      }
     }
-    setIsLoaded(true);
+    void load();
+
+    // Setup SSE to receive updates
+    const source = new EventSource(`/api/sessions/${sessionId}/events`);
+    source.addEventListener('session_update', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.viewerSettings) {
+          setSettings(prev => ({...prev, ...data.viewerSettings}));
+        }
+      } catch {}
+    });
+
+    return () => {
+      cancelled = true;
+      source.close();
+    };
   }, [sessionId]);
 
-  const updateSettings = (newSettings: Partial<ViewerSettings>) => {
-    setSettings(prev => {
-      const next = {...prev, ...newSettings};
-      localStorage.setItem(`rezenter_viewerSettings_${sessionId}`, JSON.stringify(next));
-      return next;
-    });
+  const updateSettings = async (newSettings: Partial<ViewerSettings>) => {
+    const next = {...settings, ...newSettings};
+    setSettings(next);
+    try {
+      await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({viewerSettings: next}),
+      });
+    } catch {}
   };
 
   return {settings, updateSettings, isLoaded};

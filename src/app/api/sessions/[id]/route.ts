@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import {getSessionRepository} from '@/lib/repository';
 import {toClientSession} from '@/lib/session-json';
 import {publishSessionUpdate} from '@/lib/session-events';
+import type {SessionRecord} from '@/lib/types';
 
 const repo = getSessionRepository();
 
@@ -22,19 +23,33 @@ export async function PATCH(request: Request, {params}: Params) {
   const {id} = await params;
   const payload = (await request.json()) as {
     disableScaleResetOnPageChange?: boolean;
+    viewerSettings?: NonNullable<SessionRecord['viewerSettings']>;
   };
 
-  if (typeof payload.disableScaleResetOnPageChange !== 'boolean') {
+  if (typeof payload.disableScaleResetOnPageChange !== 'boolean' && payload.viewerSettings === undefined) {
     return NextResponse.json(
-      {error: 'disableScaleResetOnPageChange must be a boolean'},
+      {error: 'Invalid payload'},
       {status: 400},
     );
   }
 
-  const updated = repo.setDisableScaleResetOnPageChange(
-    id,
-    payload.disableScaleResetOnPageChange,
-  );
+  let updated = false;
+
+  if (typeof payload.disableScaleResetOnPageChange === 'boolean') {
+    if (repo.setDisableScaleResetOnPageChange(
+      id,
+      payload.disableScaleResetOnPageChange,
+    )) {
+      updated = true;
+    }
+  }
+
+  if (payload.viewerSettings) {
+    if (repo.setViewerSettings(id, payload.viewerSettings)) {
+      updated = true;
+    }
+  }
+
   if (!updated) {
     return NextResponse.json({error: 'Session not found'}, {status: 404});
   }

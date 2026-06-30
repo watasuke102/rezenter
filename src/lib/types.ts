@@ -24,6 +24,13 @@ export type SessionRecord = {
   viewerOffsetX: number;
   viewerOffsetY: number;
   disableScaleResetOnPageChange: boolean;
+  viewerSettings?: {
+    concatenatedMode: boolean;
+    marginTop: number;
+    marginBottom: number;
+    marginLeft: number;
+    marginRight: number;
+  };
 };
 
 export type SessionWithNotes = SessionRecord & {

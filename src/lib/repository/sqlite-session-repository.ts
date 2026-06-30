@@ -34,6 +34,7 @@ type SessionRow = {
   viewer_offset_x: number;
   viewer_offset_y: number;
   disable_scale_reset_on_page_change: number;
+  viewer_settings: string | null;
 };
 
 function clampPage(page: number, totalPages: number | null): number {
@@ -66,6 +67,7 @@ function mapSession(row: SessionRow): SessionRecord {
     viewerOffsetY: row.viewer_offset_y,
     disableScaleResetOnPageChange:
       row.disable_scale_reset_on_page_change === 1,
+    viewerSettings: row.viewer_settings ? JSON.parse(row.viewer_settings) : undefined,
   };
 }
 
@@ -121,10 +123,10 @@ export class SqliteSessionRepository implements SessionRepository {
         `INSERT INTO sessions (
           id, title, source_type, pdf_path, pdf_url, created_at, total_pages,
           viewer_scale, viewer_offset_x, viewer_offset_y,
-          disable_scale_reset_on_page_change
+          disable_scale_reset_on_page_change, viewer_settings
         ) VALUES (
           @id, @title, @sourceType, @pdfPath, @pdfUrl, @createdAt, @totalPages,
-          @viewerScale, @viewerOffsetX, @viewerOffsetY, @disableScaleReset
+          @viewerScale, @viewerOffsetX, @viewerOffsetY, @disableScaleReset, @viewerSettings
         )`,
       )
       .run({
@@ -139,6 +141,7 @@ export class SqliteSessionRepository implements SessionRepository {
         viewerOffsetX: 0,
         viewerOffsetY: 0,
         disableScaleReset: 0,
+        viewerSettings: null,
       });
 
     if (input.notes && input.notes.length > 0) {
@@ -432,6 +435,15 @@ export class SqliteSessionRepository implements SessionRepository {
       ...mapSession(row),
       timerElapsedMs: computeElapsed(row, Date.now()),
     };
+  }
+  setViewerSettings(
+    id: string,
+    settings: NonNullable<SessionRecord['viewerSettings']>,
+  ): boolean {
+    const result = this.db
+      .prepare(`UPDATE sessions SET viewer_settings = @settings WHERE id = @id`)
+      .run({id, settings: JSON.stringify(settings)});
+    return result.changes > 0;
   }
 }
 
