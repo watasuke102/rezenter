@@ -1,14 +1,7 @@
 'use client';
 
 import {useState, useEffect} from 'react';
-
-export type MarginPreset = {
-  name: string;
-  marginTop: number;
-  marginBottom: number;
-  marginLeft: number;
-  marginRight: number;
-};
+import type {MarginPreset} from '@/lib/types';
 
 export function useMarginPresets() {
   const [presets, setPresets] = useState<MarginPreset[]>([]);

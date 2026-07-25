@@ -25,8 +25,14 @@ export interface SessionRepository {
   findById(sessionId: string): SessionWithNotes | null;
   delete(sessionId: string): boolean;
   replaceNotes(sessionId: string, notes: NoteEntry[]): void;
-  nextPage(sessionId: string, options?: PageChangeOptions): SessionRecord | null;
-  prevPage(sessionId: string, options?: PageChangeOptions): SessionRecord | null;
+  nextPage(
+    sessionId: string,
+    options?: PageChangeOptions,
+  ): SessionRecord | null;
+  prevPage(
+    sessionId: string,
+    options?: PageChangeOptions,
+  ): SessionRecord | null;
   setPage(
     sessionId: string,
     page: number,
@@ -38,6 +44,10 @@ export interface SessionRepository {
     sessionId: string,
     disable: boolean,
   ): SessionRecord | null;
+  setViewerSettings(
+    sessionId: string,
+    settings: NonNullable<SessionRecord['viewerSettings']>,
+  ): boolean;
   updatePointer(sessionId: string, x: number, y: number): SessionRecord | null;
   updateViewerTransform(
     sessionId: string,

@@ -13,12 +13,7 @@ type Props = {
 
 export function SettingsModal({sessionId, isOpen, onClose}: Props) {
   const {settings, updateSettings, isLoaded} = useViewerSettings(sessionId);
-  const {
-    presets,
-    savePreset,
-    deletePreset,
-    isLoaded: presetsLoaded,
-  } = useMarginPresets();
+  const {presets, savePreset, isLoaded: presetsLoaded} = useMarginPresets();
   const [newPresetName, setNewPresetName] = useState('');
   const [selectedPresetName, setSelectedPresetName] = useState('');
 

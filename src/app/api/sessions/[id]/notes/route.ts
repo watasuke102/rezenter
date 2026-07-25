@@ -1,8 +1,7 @@
 import {NextResponse} from 'next/server';
 import {getSessionRepository} from '@/lib/repository';
 import {parseNotesJson} from '@/lib/notes';
-import {toClientSession} from '@/lib/session-json';
-import {publishSessionUpdate} from '@/lib/session-events';
+import {publishSession} from '@/lib/session-update';
 
 const repo = getSessionRepository();
 
@@ -29,7 +28,7 @@ export async function POST(request: Request, {params}: Params) {
       return NextResponse.json({error: 'Session not found'}, {status: 404});
     }
 
-    publishSessionUpdate(id, toClientSession(session));
+    publishSession(session);
 
     return NextResponse.json({session});
   } catch (error) {

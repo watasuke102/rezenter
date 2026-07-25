@@ -1,14 +1,8 @@
 'use client';
 
 import {useState, useEffect} from 'react';
-
-export type ViewerSettings = {
-  concatenatedMode: boolean;
-  marginTop: number;
-  marginBottom: number;
-  marginLeft: number;
-  marginRight: number;
-};
+import type {ClientSession} from '@/lib/client-types';
+import type {ViewerSettings} from '@/lib/types';
 
 const defaultSettings: ViewerSettings = {
   concatenatedMode: false,
@@ -33,23 +27,32 @@ export function useViewerSettings(sessionId: string) {
         if (data.session?.viewerSettings) {
           setSettings({...defaultSettings, ...data.session.viewerSettings});
         }
-      } catch (err) {
+      } catch {
         // Ignore
       } finally {
-        setIsLoaded(true);
+        if (!cancelled) {
+          setIsLoaded(true);
+        }
       }
     }
     void load();
 
     // Setup SSE to receive updates
     const source = new EventSource(`/api/sessions/${sessionId}/events`);
-    source.addEventListener('session_update', (e) => {
+    source.addEventListener('session.update', event => {
       try {
-        const data = JSON.parse(e.data);
-        if (data.viewerSettings) {
-          setSettings(prev => ({...prev, ...data.viewerSettings}));
+        const payload = JSON.parse((event as MessageEvent).data) as {
+          session?: ClientSession;
+        };
+        if (payload.session?.viewerSettings) {
+          setSettings(prev => ({
+            ...prev,
+            ...payload.session?.viewerSettings,
+          }));
         }
-      } catch {}
+      } catch {
+        // Ignore malformed event payloads.
+      }
     });
 
     return () => {
@@ -67,7 +70,9 @@ export function useViewerSettings(sessionId: string) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({viewerSettings: next}),
       });
-    } catch {}
+    } catch {
+      // Keep the optimistic local state on transient network failures.
+    }
   };
 
   return {settings, updateSettings, isLoaded};

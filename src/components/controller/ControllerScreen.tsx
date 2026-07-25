@@ -13,7 +13,10 @@ export function ControllerScreen({sessionId}: Props) {
   const [pointerMode, setPointerMode] = useState(false);
   const [fullScaleAdjustment, setFullScaleAdjustment] = useState(0);
   const [disableScaleReset, setDisableScaleReset] = useState(false);
-  const [pdfImageSize, setPdfImageSize] = useState<{width: number; height: number} | null>(null);
+  const [pdfImageSize, setPdfImageSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   const {settings} = useViewerSettings(sessionId);
 
@@ -35,18 +38,20 @@ export function ControllerScreen({sessionId}: Props) {
             totalPages?: number;
           };
         };
-        
+
         if (cancelled || !payload.session) {
           return;
         }
-        
-        if (typeof payload.session.disableScaleResetOnPageChange === 'boolean') {
+
+        if (
+          typeof payload.session.disableScaleResetOnPageChange === 'boolean'
+        ) {
           setDisableScaleReset(payload.session.disableScaleResetOnPageChange);
         }
 
         if (payload.session.pdfSrc) {
-          const { getDocument, getRenderedPage } = await import('@/components/pdf/PdfPageCanvas');
-          const pdf = await getDocument(payload.session.pdfSrc);
+          const {getRenderedPage} =
+            await import('@/components/pdf/PdfPageCanvas');
           const page = await getRenderedPage(payload.session.pdfSrc, 1);
           const totalPages = payload.session.totalPages || 1;
           setPdfImageSize({

@@ -37,6 +37,11 @@ type SessionRow = {
   viewer_settings: string | null;
 };
 
+type PageStateRow = Pick<
+  SessionRow,
+  'current_page' | 'total_pages' | 'disable_scale_reset_on_page_change'
+>;
+
 function clampPage(page: number, totalPages: number | null): number {
   const base = Math.max(0, Math.floor(page));
   if (totalPages === null) {
@@ -65,9 +70,10 @@ function mapSession(row: SessionRow): SessionRecord {
     viewerScale: row.viewer_scale,
     viewerOffsetX: row.viewer_offset_x,
     viewerOffsetY: row.viewer_offset_y,
-    disableScaleResetOnPageChange:
-      row.disable_scale_reset_on_page_change === 1,
-    viewerSettings: row.viewer_settings ? JSON.parse(row.viewer_settings) : undefined,
+    disableScaleResetOnPageChange: row.disable_scale_reset_on_page_change === 1,
+    viewerSettings: row.viewer_settings
+      ? JSON.parse(row.viewer_settings)
+      : undefined,
   };
 }
 
@@ -184,7 +190,7 @@ export class SqliteSessionRepository implements SessionRepository {
     return result.changes > 0;
   }
 
-  replaceNotes(sessionId: string, notes: NoteEntry[]) {
+  replaceNotes(sessionId: string, notes: NoteEntry[]): void {
     const tx = this.db.transaction((items: NoteEntry[]) => {
       this.db.prepare(`DELETE FROM notes WHERE session_id = ?`).run(sessionId);
       const stmt = this.db.prepare(
@@ -202,74 +208,14 @@ export class SqliteSessionRepository implements SessionRepository {
     sessionId: string,
     options?: PageChangeOptions,
   ): SessionRecord | null {
-    const row = this.db
-      .prepare(
-        `SELECT current_page, total_pages, disable_scale_reset_on_page_change FROM sessions WHERE id = ?`,
-      )
-      .get(sessionId) as
-      | Pick<
-          SessionRow,
-          | 'current_page'
-          | 'total_pages'
-          | 'disable_scale_reset_on_page_change'
-        >
-      | undefined;
-    if (!row) {
-      return null;
-    }
-
-    const next = clampPage(row.current_page + 1, row.total_pages);
-    if (next === row.current_page) {
-      return this.fetchSession(sessionId);
-    }
-    const resetScale =
-      options?.resetScale ??
-      row.disable_scale_reset_on_page_change !== 1;
-    this.db
-      .prepare(
-        resetScale
-          ? `UPDATE sessions SET current_page = @next, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`
-          : `UPDATE sessions SET current_page = @next WHERE id = @sessionId`,
-      )
-      .run({next, sessionId});
-    return this.fetchSession(sessionId);
+    return this.changePage(sessionId, currentPage => currentPage + 1, options);
   }
 
   prevPage(
     sessionId: string,
     options?: PageChangeOptions,
   ): SessionRecord | null {
-    const row = this.db
-      .prepare(
-        `SELECT current_page, total_pages, disable_scale_reset_on_page_change FROM sessions WHERE id = ?`,
-      )
-      .get(sessionId) as
-      | Pick<
-          SessionRow,
-          | 'current_page'
-          | 'total_pages'
-          | 'disable_scale_reset_on_page_change'
-        >
-      | undefined;
-    if (!row) {
-      return null;
-    }
-
-    const prev = clampPage(row.current_page - 1, row.total_pages);
-    if (prev === row.current_page) {
-      return this.fetchSession(sessionId);
-    }
-    const resetScale =
-      options?.resetScale ??
-      row.disable_scale_reset_on_page_change !== 1;
-    this.db
-      .prepare(
-        resetScale
-          ? `UPDATE sessions SET current_page = @prev, viewer_scale = 1, viewer_offset_x = 0, viewer_offset_y = 0 WHERE id = @sessionId`
-          : `UPDATE sessions SET current_page = @prev WHERE id = @sessionId`,
-      )
-      .run({prev, sessionId});
-    return this.fetchSession(sessionId);
+    return this.changePage(sessionId, currentPage => currentPage - 1, options);
   }
 
   setPage(
@@ -277,29 +223,29 @@ export class SqliteSessionRepository implements SessionRepository {
     page: number,
     options?: PageChangeOptions,
   ): SessionRecord | null {
+    return this.changePage(sessionId, () => page, options);
+  }
+
+  private changePage(
+    sessionId: string,
+    getTargetPage: (currentPage: number) => number,
+    options?: PageChangeOptions,
+  ): SessionRecord | null {
     const row = this.db
       .prepare(
         `SELECT current_page, total_pages, disable_scale_reset_on_page_change FROM sessions WHERE id = ?`,
       )
-      .get(sessionId) as
-      | Pick<
-          SessionRow,
-          | 'current_page'
-          | 'total_pages'
-          | 'disable_scale_reset_on_page_change'
-        >
-      | undefined;
+      .get(sessionId) as PageStateRow | undefined;
     if (!row) {
       return null;
     }
 
-    const target = clampPage(page, row.total_pages);
+    const target = clampPage(getTargetPage(row.current_page), row.total_pages);
     if (target === row.current_page) {
       return this.fetchSession(sessionId);
     }
     const resetScale =
-      options?.resetScale ??
-      row.disable_scale_reset_on_page_change !== 1;
+      options?.resetScale ?? row.disable_scale_reset_on_page_change !== 1;
     this.db
       .prepare(
         resetScale
@@ -363,6 +309,18 @@ export class SqliteSessionRepository implements SessionRepository {
       )
       .run({sessionId, disable: disable ? 1 : 0});
     return this.fetchSession(sessionId);
+  }
+
+  setViewerSettings(
+    sessionId: string,
+    settings: NonNullable<SessionRecord['viewerSettings']>,
+  ): boolean {
+    const result = this.db
+      .prepare(
+        `UPDATE sessions SET viewer_settings = @settings WHERE id = @sessionId`,
+      )
+      .run({sessionId, settings: JSON.stringify(settings)});
+    return result.changes > 0;
   }
 
   updatePointer(sessionId: string, x: number, y: number): SessionRecord | null {
@@ -436,17 +394,4 @@ export class SqliteSessionRepository implements SessionRepository {
       timerElapsedMs: computeElapsed(row, Date.now()),
     };
   }
-  setViewerSettings(
-    id: string,
-    settings: NonNullable<SessionRecord['viewerSettings']>,
-  ): boolean {
-    const result = this.db
-      .prepare(`UPDATE sessions SET viewer_settings = @settings WHERE id = @id`)
-      .run({id, settings: JSON.stringify(settings)});
-    return result.changes > 0;
-  }
-}
-
-function clampValue(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
 }

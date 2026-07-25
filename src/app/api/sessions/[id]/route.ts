@@ -2,7 +2,7 @@ import {NextResponse} from 'next/server';
 import fs from 'node:fs/promises';
 import {getSessionRepository} from '@/lib/repository';
 import {toClientSession} from '@/lib/session-json';
-import {publishSessionUpdate} from '@/lib/session-events';
+import {publishCurrentSession} from '@/lib/session-update';
 import type {SessionRecord} from '@/lib/types';
 
 const repo = getSessionRepository();
@@ -26,20 +26,22 @@ export async function PATCH(request: Request, {params}: Params) {
     viewerSettings?: NonNullable<SessionRecord['viewerSettings']>;
   };
 
-  if (typeof payload.disableScaleResetOnPageChange !== 'boolean' && payload.viewerSettings === undefined) {
-    return NextResponse.json(
-      {error: 'Invalid payload'},
-      {status: 400},
-    );
+  if (
+    typeof payload.disableScaleResetOnPageChange !== 'boolean' &&
+    payload.viewerSettings === undefined
+  ) {
+    return NextResponse.json({error: 'Invalid payload'}, {status: 400});
   }
 
   let updated = false;
 
   if (typeof payload.disableScaleResetOnPageChange === 'boolean') {
-    if (repo.setDisableScaleResetOnPageChange(
-      id,
-      payload.disableScaleResetOnPageChange,
-    )) {
+    if (
+      repo.setDisableScaleResetOnPageChange(
+        id,
+        payload.disableScaleResetOnPageChange,
+      )
+    ) {
       updated = true;
     }
   }
@@ -54,13 +56,11 @@ export async function PATCH(request: Request, {params}: Params) {
     return NextResponse.json({error: 'Session not found'}, {status: 404});
   }
 
-  const sessionWithNotes = repo.findById(id);
-  if (!sessionWithNotes) {
+  const session = publishCurrentSession(repo, id);
+  if (!session) {
     return NextResponse.json({error: 'Session not found'}, {status: 404});
   }
 
-  const session = toClientSession(sessionWithNotes);
-  publishSessionUpdate(id, session);
   return NextResponse.json({session});
 }
 

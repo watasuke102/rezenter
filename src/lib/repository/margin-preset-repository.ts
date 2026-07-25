@@ -1,7 +1,7 @@
 import 'server-only';
 import type {Database} from 'better-sqlite3';
 import {getDb} from '@/lib/db';
-import type {MarginPreset} from '@/lib/useMarginPresets';
+import type {MarginPreset} from '@/lib/types';
 
 export class MarginPresetRepository {
   private readonly db: Database;
@@ -11,7 +11,9 @@ export class MarginPresetRepository {
   }
 
   list(): MarginPreset[] {
-    const rows = this.db.prepare('SELECT * FROM margin_presets ORDER BY name ASC').all() as Array<{
+    const rows = this.db
+      .prepare('SELECT * FROM margin_presets ORDER BY name ASC')
+      .all() as Array<{
       name: string;
       margin_top: number;
       margin_bottom: number;
@@ -28,7 +30,9 @@ export class MarginPresetRepository {
   }
 
   save(preset: MarginPreset) {
-    this.db.prepare(`
+    this.db
+      .prepare(
+        `
       INSERT INTO margin_presets (name, margin_top, margin_bottom, margin_left, margin_right)
       VALUES (@name, @marginTop, @marginBottom, @marginLeft, @marginRight)
       ON CONFLICT(name) DO UPDATE SET
@@ -36,13 +40,15 @@ export class MarginPresetRepository {
         margin_bottom = excluded.margin_bottom,
         margin_left = excluded.margin_left,
         margin_right = excluded.margin_right
-    `).run({
-      name: preset.name,
-      marginTop: preset.marginTop,
-      marginBottom: preset.marginBottom,
-      marginLeft: preset.marginLeft,
-      marginRight: preset.marginRight,
-    });
+    `,
+      )
+      .run({
+        name: preset.name,
+        marginTop: preset.marginTop,
+        marginBottom: preset.marginBottom,
+        marginLeft: preset.marginLeft,
+        marginRight: preset.marginRight,
+      });
   }
 
   delete(name: string) {

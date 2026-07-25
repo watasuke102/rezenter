@@ -5,6 +5,18 @@ export type NoteEntry = {
   note: string;
 };
 
+export type ViewerSettings = {
+  concatenatedMode: boolean;
+  marginTop: number;
+  marginBottom: number;
+  marginLeft: number;
+  marginRight: number;
+};
+
+export type MarginPreset = Omit<ViewerSettings, 'concatenatedMode'> & {
+  name: string;
+};
+
 export type SessionRecord = {
   id: string;
   title: string;
@@ -24,13 +36,7 @@ export type SessionRecord = {
   viewerOffsetX: number;
   viewerOffsetY: number;
   disableScaleResetOnPageChange: boolean;
-  viewerSettings?: {
-    concatenatedMode: boolean;
-    marginTop: number;
-    marginBottom: number;
-    marginLeft: number;
-    marginRight: number;
-  };
+  viewerSettings?: ViewerSettings;
 };
 
 export type SessionWithNotes = SessionRecord & {
