@@ -9,8 +9,8 @@ export function CreateSessionForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [sourceType, setSourceType] = useState<'file' | 'url' | 'typst'>(
-    'file',
+  const [sourceType, setSourceType] = useState<'typst' | 'file' | 'url'>(
+    'typst',
   );
   const [typstPath, setTypstPath] = useState('');
 
@@ -65,24 +65,24 @@ export function CreateSessionForm() {
         <div className={styles.switchRow}>
           <button
             type='button'
+            className={`${styles.switchButton} ${sourceType === 'typst' ? styles.switchButtonActive : ''}`}
+            onClick={() => setSourceType('typst')}
+          >
+            Typst
+          </button>
+          <button
+            type='button'
             className={`${styles.switchButton} ${sourceType === 'file' ? styles.switchButtonActive : ''}`}
             onClick={() => setSourceType('file')}
           >
-            ファイル
+            ファイル (PDF)
           </button>
           <button
             type='button'
             className={`${styles.switchButton} ${sourceType === 'url' ? styles.switchButtonActive : ''}`}
             onClick={() => setSourceType('url')}
           >
-            URL
-          </button>
-          <button
-            type='button'
-            className={`${styles.switchButton} ${sourceType === 'typst' ? styles.switchButtonActive : ''}`}
-            onClick={() => setSourceType('typst')}
-          >
-            Typst
+            URL (PDF)
           </button>
         </div>
       </div>
