@@ -10,7 +10,7 @@ type Props = {
 };
 
 export function ControllerScreen({sessionId}: Props) {
-  const [pointerMode, setPointerMode] = useState(false);
+  const [pointerMode, setPointerMode] = useState(true);
   const [fullScaleAdjustment, setFullScaleAdjustment] = useState(0);
   const [disableScaleReset, setDisableScaleReset] = useState(false);
   const [slideImageSize, setSlideImageSize] = useState<{
