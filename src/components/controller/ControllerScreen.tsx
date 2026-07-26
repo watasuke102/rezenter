@@ -13,7 +13,7 @@ export function ControllerScreen({sessionId}: Props) {
   const [pointerMode, setPointerMode] = useState(false);
   const [fullScaleAdjustment, setFullScaleAdjustment] = useState(0);
   const [disableScaleReset, setDisableScaleReset] = useState(false);
-  const [pdfImageSize, setPdfImageSize] = useState<{
+  const [slideImageSize, setSlideImageSize] = useState<{
     width: number;
     height: number;
   } | null>(null);
@@ -35,6 +35,8 @@ export function ControllerScreen({sessionId}: Props) {
           session?: {
             disableScaleResetOnPageChange?: boolean;
             pdfSrc?: string;
+            slideKind?: 'pdf' | 'svg';
+            svgPageBaseUrl?: string;
             totalPages?: number;
           };
         };
@@ -49,12 +51,23 @@ export function ControllerScreen({sessionId}: Props) {
           setDisableScaleReset(payload.session.disableScaleResetOnPageChange);
         }
 
-        if (payload.session.pdfSrc) {
+        if (
+          payload.session.slideKind === 'svg' &&
+          payload.session.svgPageBaseUrl
+        ) {
+          const {getSvgPage} = await import('@/components/svg/svg-page');
+          const page = await getSvgPage(payload.session.svgPageBaseUrl, 0);
+          const totalPages = payload.session.totalPages || 1;
+          setSlideImageSize({
+            width: page.width,
+            height: page.height * (settings.concatenatedMode ? totalPages : 1),
+          });
+        } else if (payload.session.pdfSrc) {
           const {getRenderedPage} =
             await import('@/components/pdf/PdfPageCanvas');
           const page = await getRenderedPage(payload.session.pdfSrc, 1);
           const totalPages = payload.session.totalPages || 1;
-          setPdfImageSize({
+          setSlideImageSize({
             width: page.width,
             height: page.height * (settings.concatenatedMode ? totalPages : 1),
           });
@@ -148,7 +161,7 @@ export function ControllerScreen({sessionId}: Props) {
           <PointerControl
             sessionId={sessionId}
             fullScaleAdjustment={fullScaleAdjustment}
-            pdfImageSize={pdfImageSize}
+            pdfImageSize={slideImageSize}
           />
         </div>
       )}

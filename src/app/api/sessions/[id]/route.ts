@@ -87,5 +87,13 @@ export async function DELETE(_: Request, {params}: Params) {
     }
   }
 
+  if (session.sourceType === 'typst' && session.svgDir) {
+    try {
+      await fs.rm(session.svgDir, {recursive: true, force: true});
+    } catch {
+      // Ignore generated SVG cleanup failures after DB deletion.
+    }
+  }
+
   return NextResponse.json({ok: true});
 }

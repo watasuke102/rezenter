@@ -3,12 +3,16 @@
 import {useState, type FormEvent} from 'react';
 import {useRouter} from 'next/navigation';
 import * as styles from '@/components/session/CreateSessionForm.css';
+import {TypstFileManager} from '@/components/file-manager/TypstFileManager';
 
 export function CreateSessionForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [sourceType, setSourceType] = useState<'file' | 'url'>('file');
+  const [sourceType, setSourceType] = useState<'file' | 'url' | 'typst'>(
+    'file',
+  );
+  const [typstPath, setTypstPath] = useState('');
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,7 +61,7 @@ export function CreateSessionForm() {
       </div>
 
       <div className={styles.row}>
-        <span className={styles.label}>PDFの読み込み方法</span>
+        <span className={styles.label}>スライドの読み込み方法</span>
         <div className={styles.switchRow}>
           <button
             type='button'
@@ -72,6 +76,13 @@ export function CreateSessionForm() {
             onClick={() => setSourceType('url')}
           >
             URL
+          </button>
+          <button
+            type='button'
+            className={`${styles.switchButton} ${sourceType === 'typst' ? styles.switchButtonActive : ''}`}
+            onClick={() => setSourceType('typst')}
+          >
+            Typst
           </button>
         </div>
       </div>
@@ -89,7 +100,7 @@ export function CreateSessionForm() {
             accept='application/pdf'
           />
         </div>
-      ) : (
+      ) : sourceType === 'url' ? (
         <div className={styles.row}>
           <label className={styles.label} htmlFor='pdfUrl'>
             PDF URL
@@ -100,6 +111,12 @@ export function CreateSessionForm() {
             name='pdfUrl'
             type='url'
           />
+        </div>
+      ) : (
+        <div className={styles.row}>
+          <span className={styles.label}>Typstファイル（サーバー上）</span>
+          <input type='hidden' name='typstPath' value={typstPath} />
+          <TypstFileManager value={typstPath} onChange={setTypstPath} />
         </div>
       )}
 

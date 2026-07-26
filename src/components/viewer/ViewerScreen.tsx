@@ -1,9 +1,10 @@
 'use client';
 
 import {useEffect, useRef, useState} from 'react';
-import {PdfPageCanvas} from '@/components/pdf/PdfPageCanvas';
 import {PdfConcatenatedCanvas} from '@/components/pdf/PdfConcatenatedCanvas';
-import type {ClientSession} from '@/lib/client-types';
+import {SlidePage} from '@/components/slides/SlidePage';
+import {SvgConcatenatedPages} from '@/components/svg/SvgConcatenatedPages';
+import {getClientSlideSource, type ClientSession} from '@/lib/client-types';
 import * as styles from '@/components/viewer/viewer.css';
 import {useViewerSettings} from '@/lib/useViewerSettings';
 
@@ -23,7 +24,7 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     width: typeof window === 'undefined' ? 1 : window.innerWidth,
     height: typeof window === 'undefined' ? 1 : window.innerHeight,
   }));
-  const [pdfViewport, setPdfViewport] = useState<{
+  const [slideViewport, setSlideViewport] = useState<{
     width: number;
     height: number;
   } | null>(null);
@@ -107,18 +108,19 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     };
   }, [session?.pointerUpdatedAt]);
 
-  if (!session || !session.pdfSrc) {
+  const slideSource = session ? getClientSlideSource(session) : null;
+  if (!session || !slideSource) {
     return <main className={styles.page}>Loading session...</main>;
   }
 
   const VIEWER_OFFSET_LIMIT = 0.999;
 
   const displayRect = (() => {
-    if (!pdfViewport) {
+    if (!slideViewport) {
       return null;
     }
 
-    const pdfAspect = pdfViewport.width / pdfViewport.height;
+    const slideAspect = slideViewport.width / slideViewport.height;
     const containerWidth = viewportSize.width;
     const containerHeight = viewportSize.height;
     const containerAspect = containerWidth / containerHeight;
@@ -126,16 +128,16 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     let baseHeight: number;
     if (settings.concatenatedMode) {
       baseWidth = containerWidth;
-      baseHeight = containerWidth / pdfAspect;
+      baseHeight = containerWidth / slideAspect;
     } else {
       baseWidth =
-        containerAspect > pdfAspect
-          ? containerHeight * pdfAspect
+        containerAspect > slideAspect
+          ? containerHeight * slideAspect
           : containerWidth;
       baseHeight =
-        containerAspect > pdfAspect
+        containerAspect > slideAspect
           ? containerHeight
-          : containerWidth / pdfAspect;
+          : containerWidth / slideAspect;
     }
 
     const scale = Math.max(1, session.viewerScale);
@@ -148,8 +150,14 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     let actualOffsetY: number;
 
     if (settings.concatenatedMode) {
-      actualOffsetX = Math.max(-rangeX, Math.min(rangeX, session.viewerOffsetX * containerWidth));
-      actualOffsetY = Math.max(-rangeY, Math.min(rangeY, rangeY + session.viewerOffsetY * containerHeight));
+      actualOffsetX = Math.max(
+        -rangeX,
+        Math.min(rangeX, session.viewerOffsetX * containerWidth),
+      );
+      actualOffsetY = Math.max(
+        -rangeY,
+        Math.min(rangeY, rangeY + session.viewerOffsetY * containerHeight),
+      );
     } else {
       const offsetX = Math.max(
         -VIEWER_OFFSET_LIMIT,
@@ -207,16 +215,30 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
   if (settings.concatenatedMode) {
     return (
       <main className={styles.page}>
-        <PdfConcatenatedCanvas
-          src={session.pdfSrc}
-          marginTop={settings.marginTop}
-          marginBottom={settings.marginBottom}
-          marginLeft={settings.marginLeft}
-          marginRight={settings.marginRight}
-          className={styles.slide}
-          style={slideStyle}
-          onViewportChange={setPdfViewport}
-        />
+        {slideSource.kind === 'svg' ? (
+          <SvgConcatenatedPages
+            baseUrl={slideSource.baseUrl}
+            totalPages={session.totalPages ?? 1}
+            marginTop={settings.marginTop}
+            marginBottom={settings.marginBottom}
+            marginLeft={settings.marginLeft}
+            marginRight={settings.marginRight}
+            className={styles.slide}
+            style={slideStyle}
+            onViewportChange={setSlideViewport}
+          />
+        ) : (
+          <PdfConcatenatedCanvas
+            src={slideSource.src}
+            marginTop={settings.marginTop}
+            marginBottom={settings.marginBottom}
+            marginLeft={settings.marginLeft}
+            marginRight={settings.marginRight}
+            className={styles.slide}
+            style={slideStyle}
+            onViewportChange={setSlideViewport}
+          />
+        )}
         <div
           className={styles.pointer}
           style={{
@@ -231,13 +253,14 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
 
   return (
     <main className={styles.page}>
-      <PdfPageCanvas
-        src={session.pdfSrc}
+      <SlidePage
+        source={slideSource}
         page={session.currentPage}
+        totalPages={session.totalPages ?? undefined}
         fullscreen
         className={styles.slide}
         style={slideStyle}
-        onViewportChange={setPdfViewport}
+        onViewportChange={setSlideViewport}
         onPrevPage={() => moveSlide('prev')}
         onNextPage={() => moveSlide('next')}
       />

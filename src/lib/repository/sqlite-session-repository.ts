@@ -21,6 +21,8 @@ type SessionRow = {
   source_type: string;
   pdf_path: string | null;
   pdf_url: string | null;
+  typst_path: string | null;
+  svg_dir: string | null;
   created_at: number;
   current_page: number;
   total_pages: number | null;
@@ -58,6 +60,8 @@ function mapSession(row: SessionRow): SessionRecord {
     sourceType: row.source_type as SessionRecord['sourceType'],
     pdfPath: row.pdf_path,
     pdfUrl: row.pdf_url,
+    typstPath: row.typst_path,
+    svgDir: row.svg_dir,
     createdAt: row.created_at,
     currentPage: row.current_page,
     totalPages: row.total_pages,
@@ -127,11 +131,13 @@ export class SqliteSessionRepository implements SessionRepository {
     this.db
       .prepare(
         `INSERT INTO sessions (
-          id, title, source_type, pdf_path, pdf_url, created_at, total_pages,
+          id, title, source_type, pdf_path, pdf_url, typst_path, svg_dir,
+          created_at, total_pages,
           viewer_scale, viewer_offset_x, viewer_offset_y,
           disable_scale_reset_on_page_change, viewer_settings
         ) VALUES (
-          @id, @title, @sourceType, @pdfPath, @pdfUrl, @createdAt, @totalPages,
+          @id, @title, @sourceType, @pdfPath, @pdfUrl, @typstPath, @svgDir,
+          @createdAt, @totalPages,
           @viewerScale, @viewerOffsetX, @viewerOffsetY, @disableScaleReset, @viewerSettings
         )`,
       )
@@ -141,6 +147,8 @@ export class SqliteSessionRepository implements SessionRepository {
         sourceType: input.sourceType,
         pdfPath: input.pdfPath ?? null,
         pdfUrl: input.pdfUrl ?? null,
+        typstPath: input.typstPath ?? null,
+        svgDir: input.svgDir ?? null,
         createdAt,
         totalPages: input.totalPages ?? null,
         viewerScale: 1,

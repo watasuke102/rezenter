@@ -42,7 +42,9 @@ export function SessionList({sessions}: Props) {
     }
   }
 
-  const [settingsSessionId, setSettingsSessionId] = useState<string | null>(null);
+  const [settingsSessionId, setSettingsSessionId] = useState<string | null>(
+    null,
+  );
 
   return (
     <div className={styles.sessions}>
@@ -60,6 +62,9 @@ export function SessionList({sessions}: Props) {
           <div className={styles.sessionMeta}>
             <strong>{session.title}</strong>
             <span>ID: {session.id}</span>
+            <span>
+              Source: {session.sourceType === 'typst' ? 'Typst' : 'PDF'}
+            </span>
             <span>
               Page: {session.currentPage + 1} / {session.totalPages ?? '?'}
             </span>

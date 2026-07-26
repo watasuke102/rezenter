@@ -1,6 +1,6 @@
 import type {
   NoteEntry,
-  PdfSourceType,
+  SessionSourceType,
   SessionRecord,
   SessionSummary,
   SessionWithNotes,
@@ -8,9 +8,11 @@ import type {
 
 export type CreateSessionInput = {
   title: string;
-  sourceType: PdfSourceType;
+  sourceType: SessionSourceType;
   pdfPath?: string;
   pdfUrl?: string;
+  typstPath?: string;
+  svgDir?: string;
   totalPages?: number;
   notes?: NoteEntry[];
 };

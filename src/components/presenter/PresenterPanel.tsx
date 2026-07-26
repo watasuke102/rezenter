@@ -1,15 +1,16 @@
 'use client';
 
 import {ChevronLeft, ChevronRight, Pause, Play, RotateCcw} from 'lucide-react';
-import {PdfPageCanvas} from '@/components/pdf/PdfPageCanvas';
+import {SlidePage, type SlideSource} from '@/components/slides/SlidePage';
 import {NoteImportForm} from '@/components/session/NoteImportForm';
 import * as styles from '@/components/presenter/presenter.css';
 
 type Props = {
   sessionId: string;
-  pdfSrc: string;
+  slideSource: SlideSource;
   currentPage: number;
   nextPage: number;
+  totalPages: number | null;
   totalPagesText: string;
   timerText: string;
   timerRunning: boolean;
@@ -22,9 +23,10 @@ type Props = {
 
 export function PresenterPanel({
   sessionId,
-  pdfSrc,
+  slideSource,
   currentPage,
   nextPage,
+  totalPages,
   totalPagesText,
   timerText,
   timerRunning,
@@ -39,9 +41,10 @@ export function PresenterPanel({
       <section className={styles.left}>
         <div className={styles.previewSection}>
           <h2 className={styles.sectionTitle}>Current</h2>
-          <PdfPageCanvas
-            src={pdfSrc}
+          <SlidePage
+            source={slideSource}
             page={currentPage}
+            totalPages={totalPages ?? undefined}
             className={styles.currentPreview}
           />
         </div>
@@ -66,9 +69,10 @@ export function PresenterPanel({
         </div>
         <div className={styles.previewSection}>
           <h2 className={styles.sectionTitle}>Next</h2>
-          <PdfPageCanvas
-            src={pdfSrc}
+          <SlidePage
+            source={slideSource}
             page={nextPage}
+            totalPages={totalPages ?? undefined}
             className={styles.nextPreview}
           />
         </div>

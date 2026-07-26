@@ -17,6 +17,8 @@ function initSchema(db: Database.Database) {
       source_type TEXT NOT NULL,
       pdf_path TEXT,
       pdf_url TEXT,
+      typst_path TEXT,
+      svg_dir TEXT,
       created_at INTEGER NOT NULL,
       current_page INTEGER NOT NULL DEFAULT 0,
       total_pages INTEGER,
@@ -49,6 +51,11 @@ function initSchema(db: Database.Database) {
       margin_bottom INTEGER NOT NULL,
       margin_left INTEGER NOT NULL,
       margin_right INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS favorite_paths (
+      path TEXT PRIMARY KEY,
+      created_at INTEGER NOT NULL
     );
   `);
 
@@ -84,9 +91,15 @@ function initSchema(db: Database.Database) {
   }
 
   if (!columns.has('viewer_settings')) {
-    db.prepare(
-      `ALTER TABLE sessions ADD COLUMN viewer_settings TEXT`,
-    ).run();
+    db.prepare(`ALTER TABLE sessions ADD COLUMN viewer_settings TEXT`).run();
+  }
+
+  if (!columns.has('typst_path')) {
+    db.prepare(`ALTER TABLE sessions ADD COLUMN typst_path TEXT`).run();
+  }
+
+  if (!columns.has('svg_dir')) {
+    db.prepare(`ALTER TABLE sessions ADD COLUMN svg_dir TEXT`).run();
   }
 }
 

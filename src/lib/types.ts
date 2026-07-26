@@ -1,4 +1,4 @@
-export type PdfSourceType = 'upload' | 'url';
+export type SessionSourceType = 'upload' | 'url' | 'typst';
 
 export type NoteEntry = {
   page: number;
@@ -20,9 +20,11 @@ export type MarginPreset = Omit<ViewerSettings, 'concatenatedMode'> & {
 export type SessionRecord = {
   id: string;
   title: string;
-  sourceType: PdfSourceType;
+  sourceType: SessionSourceType;
   pdfPath: string | null;
   pdfUrl: string | null;
+  typstPath: string | null;
+  svgDir: string | null;
   createdAt: number;
   currentPage: number;
   totalPages: number | null;

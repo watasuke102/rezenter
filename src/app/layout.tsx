@@ -4,7 +4,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Rezenter',
   description:
-    'PDF presentation sessions with viewer, presenter, and controller',
+    'PDF and Typst presentation sessions with viewer, presenter, and controller',
 };
 
 export default function RootLayout({

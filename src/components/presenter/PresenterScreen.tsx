@@ -2,7 +2,7 @@
 
 import {useEffect, useMemo, useState} from 'react';
 import {PresenterPanel} from '@/components/presenter/PresenterPanel';
-import type {ClientSession} from '@/lib/client-types';
+import {getClientSlideSource, type ClientSession} from '@/lib/client-types';
 
 type Props = {
   sessionId: string;
@@ -101,7 +101,8 @@ export function PresenterScreen({sessionId}: Props) {
     });
   }
 
-  if (!session || !session.pdfSrc) {
+  const slideSource = session ? getClientSlideSource(session) : null;
+  if (!session || !slideSource) {
     return <main>Loading presenter...</main>;
   }
 
@@ -111,9 +112,10 @@ export function PresenterScreen({sessionId}: Props) {
   return (
     <PresenterPanel
       sessionId={sessionId}
-      pdfSrc={session.pdfSrc}
+      slideSource={slideSource}
       currentPage={session.currentPage}
       nextPage={session.currentPage + 1}
+      totalPages={totalPages}
       totalPagesText={totalPagesText}
       timerText={formatMs(elapsedMs)}
       timerRunning={session.timerRunning}

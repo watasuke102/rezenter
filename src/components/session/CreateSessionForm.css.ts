@@ -32,6 +32,7 @@ export const row = style({
 export const switchRow = style({
   display: 'flex',
   gap: 6,
+  flexWrap: 'wrap',
 });
 
 export const switchButton = style({

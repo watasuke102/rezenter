@@ -9,5 +9,11 @@ export function toClientSession(session: SessionWithNotes) {
   return {
     ...session,
     pdfSrc,
+    slideKind:
+      session.sourceType === 'typst' ? ('svg' as const) : ('pdf' as const),
+    svgPageBaseUrl:
+      session.sourceType === 'typst'
+        ? `/api/sessions/${session.id}/slides`
+        : null,
   };
 }

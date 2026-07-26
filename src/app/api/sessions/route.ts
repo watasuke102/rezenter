@@ -5,8 +5,10 @@ import {nanoid} from 'nanoid';
 import {parseNotesJson} from '@/lib/notes';
 import {countPdfPagesFromBytes} from '@/lib/pdf/metadata';
 import {getSessionRepository} from '@/lib/repository';
+import {compileTypstToSvg} from '@/lib/typst/compiler';
 
 const repo = getSessionRepository();
+export const runtime = 'nodejs';
 
 export async function GET() {
   return NextResponse.json({sessions: repo.list()});
@@ -19,14 +21,19 @@ export async function POST(request: Request) {
       String(formData.get('title') || 'Untitled Session').trim() ||
       'Untitled Session';
     const pdfUrl = String(formData.get('pdfUrl') || '').trim();
+    const typstPath = String(formData.get('typstPath') || '').trim();
     const pdfFile = formData.get('pdfFile');
     const hasPdfFile =
       pdfFile instanceof File && pdfFile.size > 0 && pdfFile.name.length > 0;
     const hasPdfUrl = pdfUrl.length > 0;
+    const hasTypstPath = typstPath.length > 0;
 
-    if (hasPdfFile && hasPdfUrl) {
+    if ([hasPdfFile, hasPdfUrl, hasTypstPath].filter(Boolean).length > 1) {
       return NextResponse.json(
-        {error: 'Specify either pdfFile or pdfUrl, not both'},
+        {
+          error:
+            'PDFファイル、PDF URL、Typstファイルのいずれか1つを指定してください',
+        },
         {status: 400},
       );
     }
@@ -64,9 +71,28 @@ export async function POST(request: Request) {
       return NextResponse.json({session}, {status: 201});
     }
 
+    if (hasTypstPath) {
+      const compiled = await compileTypstToSvg(typstPath);
+      try {
+        const session = repo.create({
+          title,
+          sourceType: 'typst',
+          typstPath: compiled.sourcePath,
+          svgDir: compiled.svgDir,
+          totalPages: compiled.totalPages,
+          notes,
+        });
+
+        return NextResponse.json({session}, {status: 201});
+      } catch (error) {
+        await fs.rm(compiled.svgDir, {recursive: true, force: true});
+        throw error;
+      }
+    }
+
     if (!hasPdfUrl) {
       return NextResponse.json(
-        {error: 'Either pdfFile or pdfUrl is required'},
+        {error: '表示するPDFまたはTypstファイルを指定してください'},
         {status: 400},
       );
     }
