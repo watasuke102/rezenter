@@ -162,6 +162,7 @@ export function ControllerScreen({sessionId}: Props) {
             sessionId={sessionId}
             fullScaleAdjustment={fullScaleAdjustment}
             pdfImageSize={slideImageSize}
+            onSlide={slide}
           />
         </div>
       )}

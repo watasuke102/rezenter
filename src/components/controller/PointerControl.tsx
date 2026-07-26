@@ -1,42 +1,128 @@
 'use client';
 
-import {useRef} from 'react';
+import {useEffect, useRef} from 'react';
 import * as styles from '@/components/controller/PointerControl.css';
+
+type Point = {x: number; y: number};
+
+type InteractionState =
+  | 'Idle'
+  | 'Down'
+  | 'Drag'
+  | 'Hold'
+  | 'FirstTap'
+  | 'PageMoved'
+  | 'DoubleDown'
+  | 'Pinch'
+  | 'Pan'
+  | 'Wait';
+
+type SlideAction = 'next' | 'prev';
 
 type Props = {
   sessionId: string;
   fullScaleAdjustment: number;
   pdfImageSize?: {width: number; height: number} | null;
+  onSlide: (action: SlideAction) => Promise<void>;
 };
+
+const HOLD_DELAY_MS = 500;
+const SECOND_TAP_TIMEOUT_MS = 300;
+const DRAG_START_DISTANCE_PX = 8;
+const DOUBLE_DOWN_MOVEMENT_THRESHOLD_PX = 6;
+const PINCH_DIRECTION_COSINE_THRESHOLD = -0.45;
+const PAN_DIRECTION_COSINE_THRESHOLD = 0.45;
+const HOLD_VIBRATION_DURATION_MS = 50;
+
+const POINTER_SEND_INTERVAL_MS = 20;
+const GESTURE_SEND_INTERVAL_MS = 20;
+const BASE_FULL_SCALE_SPEED_PX_PER_SEC = 7000;
+const DEAD_ZONE_SPEED_PX_PER_SEC = 20;
+const PAGE_PAN_SPEED_MULTIPLIER = 3.1;
 
 export function PointerControl({
   sessionId,
   fullScaleAdjustment,
   pdfImageSize,
+  onSlide,
 }: Props) {
-  const activePointersRef = useRef(new Map<number, {x: number; y: number}>());
+  const stateRef = useRef<InteractionState>('Idle');
+  const activePointersRef = useRef(new Map<number, Point>());
+  const primaryPointerIdRef = useRef<number | null>(null);
+  const downStartPointRef = useRef<Point | null>(null);
+  const downStartedAtRef = useRef(0);
+  const firstTapActionRef = useRef<SlideAction | null>(null);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const secondTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const pointerActiveRef = useRef(false);
-  const activePointerIdRef = useRef<number | null>(null);
   const lastXRef = useRef(0);
   const lastYRef = useRef(0);
   const lastMoveAtRef = useRef(0);
   const lastSentAtRef = useRef(0);
-  const gestureActiveRef = useRef(false);
-  const gestureModeRef = useRef<'pan' | 'pinch' | null>(null);
-  const lastGestureCenterRef = useRef<{x: number; y: number} | null>(null);
+
+  const gesturePointerIdsRef = useRef<[number, number] | null>(null);
+  const gestureStartPointersRef = useRef<Map<number, Point> | null>(null);
+  const lastGestureCenterRef = useRef<Point | null>(null);
   const lastGestureDistanceRef = useRef<number | null>(null);
-  const lastGesturePointersRef = useRef<Map<
-    number,
-    {x: number; y: number}
-  > | null>(null);
-  const gestureStartCenterRef = useRef<{x: number; y: number} | null>(null);
-  const gestureStartDistanceRef = useRef<number | null>(null);
   const lastGestureSentAtRef = useRef(0);
 
-  const SEND_INTERVAL_MS = 20;
-  const BASE_FULL_SCALE_SPEED_PX_PER_SEC = 7000;
-  const DEAD_ZONE_SPEED_PX_PER_SEC = 20;
-  const PAGE_PAN_SPEED_MULTIPLIER = 3.1;
+  function clearHoldTimer() {
+    if (holdTimerRef.current !== null) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }
+
+  function clearSecondTapTimer() {
+    if (secondTapTimerRef.current !== null) {
+      clearTimeout(secondTapTimerRef.current);
+      secondTapTimerRef.current = null;
+    }
+  }
+
+  function endPointerMotion() {
+    pointerActiveRef.current = false;
+    lastMoveAtRef.current = 0;
+  }
+
+  function endGesture() {
+    gesturePointerIdsRef.current = null;
+    gestureStartPointersRef.current = null;
+    lastGestureCenterRef.current = null;
+    lastGestureDistanceRef.current = null;
+    lastGestureSentAtRef.current = 0;
+  }
+
+  function transitionTo(nextState: InteractionState) {
+    const previousState = stateRef.current;
+    if (previousState === 'Down' && nextState !== 'Down') {
+      clearHoldTimer();
+    }
+    if (previousState === 'FirstTap' && nextState !== 'FirstTap') {
+      clearSecondTapTimer();
+    }
+
+    stateRef.current = nextState;
+
+    if (nextState === 'Idle' || nextState === 'Wait') {
+      clearHoldTimer();
+      clearSecondTapTimer();
+      primaryPointerIdRef.current = null;
+      downStartPointRef.current = null;
+      downStartedAtRef.current = 0;
+      firstTapActionRef.current = null;
+      endPointerMotion();
+      endGesture();
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      clearHoldTimer();
+      clearSecondTapTimer();
+    };
+  }, []);
 
   async function sendPointer(x: number, y: number) {
     try {
@@ -81,38 +167,58 @@ export function PointerControl({
     );
   }
 
-  function beginPointer(clientX: number, clientY: number) {
+  function beginDown(pointerId: number, point: Point) {
+    transitionTo('Down');
+    primaryPointerIdRef.current = pointerId;
+    downStartPointRef.current = point;
+    downStartedAtRef.current = performance.now();
+
+    holdTimerRef.current = setTimeout(() => {
+      holdTimerRef.current = null;
+      if (stateRef.current !== 'Down') {
+        return;
+      }
+
+      if ('vibrate' in navigator) {
+        navigator.vibrate(HOLD_VIBRATION_DURATION_MS);
+      }
+      transitionTo('Hold');
+    }, HOLD_DELAY_MS);
+  }
+
+  function beginDrag(point: Point) {
+    const startPoint = downStartPointRef.current ?? point;
     pointerActiveRef.current = true;
-    lastXRef.current = clientX;
-    lastYRef.current = clientY;
-    lastMoveAtRef.current = performance.now();
+    lastXRef.current = startPoint.x;
+    lastYRef.current = startPoint.y;
+    lastMoveAtRef.current = downStartedAtRef.current;
+    transitionTo('Drag');
+    processPointerMove(point.x, point.y);
   }
 
-  function endPointer() {
-    pointerActiveRef.current = false;
-    activePointerIdRef.current = null;
-    lastMoveAtRef.current = 0;
-  }
-
-  function endGesture() {
-    gestureActiveRef.current = false;
-    gestureModeRef.current = null;
-    lastGestureCenterRef.current = null;
-    lastGestureDistanceRef.current = null;
-    lastGesturePointersRef.current = null;
-    gestureStartCenterRef.current = null;
-    gestureStartDistanceRef.current = null;
-    lastGestureSentAtRef.current = 0;
+  function beginFirstTap(action: SlideAction) {
+    firstTapActionRef.current = action;
+    transitionTo('FirstTap');
+    secondTapTimerRef.current = setTimeout(() => {
+      secondTapTimerRef.current = null;
+      if (stateRef.current === 'FirstTap') {
+        transitionTo('Idle');
+      }
+    }, SECOND_TAP_TIMEOUT_MS);
   }
 
   function getGestureState() {
-    const pointers = Array.from(activePointersRef.current.values());
-    if (pointers.length < 2) {
+    const pointerIds = gesturePointerIdsRef.current;
+    if (!pointerIds) {
       return null;
     }
 
-    const first = pointers[0];
-    const second = pointers[1];
+    const first = activePointersRef.current.get(pointerIds[0]);
+    const second = activePointersRef.current.get(pointerIds[1]);
+    if (!first || !second) {
+      return null;
+    }
+
     return {
       centerX: (first.x + second.x) / 2,
       centerY: (first.y + second.y) / 2,
@@ -120,42 +226,68 @@ export function PointerControl({
     };
   }
 
-  function syncSinglePointerFromActivePointers() {
-    if (activePointersRef.current.size !== 1) {
-      endPointer();
+  function beginDoubleDown() {
+    const entries = Array.from(activePointersRef.current.entries()).slice(0, 2);
+    if (entries.length !== 2) {
       return;
     }
 
-    const [pointerId, point] = Array.from(
-      activePointersRef.current.entries(),
-    )[0];
-    activePointerIdRef.current = pointerId;
-    pointerActiveRef.current = true;
-    lastXRef.current = point.x;
-    lastYRef.current = point.y;
-    lastMoveAtRef.current = performance.now();
-  }
+    transitionTo('DoubleDown');
+    endPointerMotion();
+    const [first, second] = entries;
+    gesturePointerIdsRef.current = [first[0], second[0]];
+    gestureStartPointersRef.current = new Map(entries);
 
-  function beginGestureFromCurrentPointers() {
-    const state = getGestureState();
-    if (!state) {
-      return;
-    }
-
-    gestureActiveRef.current = true;
-    gestureModeRef.current = null;
-    endPointer();
-    gestureStartCenterRef.current = {x: state.centerX, y: state.centerY};
-    gestureStartDistanceRef.current = state.distance;
-    lastGestureCenterRef.current = {x: state.centerX, y: state.centerY};
-    lastGestureDistanceRef.current = state.distance;
-    lastGesturePointersRef.current = new Map(
-      Array.from(activePointersRef.current.entries()).slice(0, 2),
+    const centerX = (first[1].x + second[1].x) / 2;
+    const centerY = (first[1].y + second[1].y) / 2;
+    lastGestureCenterRef.current = {x: centerX, y: centerY};
+    lastGestureDistanceRef.current = Math.hypot(
+      first[1].x - second[1].x,
+      first[1].y - second[1].y,
     );
     lastGestureSentAtRef.current = performance.now();
   }
 
-  function processMove(clientX: number, clientY: number) {
+  function classifyDoubleDown() {
+    const pointerIds = gesturePointerIdsRef.current;
+    const startPointers = gestureStartPointersRef.current;
+    if (!pointerIds || !startPointers) {
+      return null;
+    }
+
+    const startA = startPointers.get(pointerIds[0]);
+    const startB = startPointers.get(pointerIds[1]);
+    const currentA = activePointersRef.current.get(pointerIds[0]);
+    const currentB = activePointersRef.current.get(pointerIds[1]);
+    if (!startA || !startB || !currentA || !currentB) {
+      return null;
+    }
+
+    const moveAx = currentA.x - startA.x;
+    const moveAy = currentA.y - startA.y;
+    const moveBx = currentB.x - startB.x;
+    const moveBy = currentB.y - startB.y;
+    const moveALength = Math.hypot(moveAx, moveAy);
+    const moveBLength = Math.hypot(moveBx, moveBy);
+    if (
+      moveALength < DOUBLE_DOWN_MOVEMENT_THRESHOLD_PX ||
+      moveBLength < DOUBLE_DOWN_MOVEMENT_THRESHOLD_PX
+    ) {
+      return null;
+    }
+
+    const cosine =
+      (moveAx * moveBx + moveAy * moveBy) / (moveALength * moveBLength);
+    if (cosine <= PINCH_DIRECTION_COSINE_THRESHOLD) {
+      return 'Pinch' as const;
+    }
+    if (cosine >= PAN_DIRECTION_COSINE_THRESHOLD) {
+      return 'Pan' as const;
+    }
+    return null;
+  }
+
+  function processPointerMove(clientX: number, clientY: number) {
     if (!pointerActiveRef.current) {
       return;
     }
@@ -197,7 +329,7 @@ export function PointerControl({
     dx = clamp(dx, -1, 1);
     dy = clamp(dy, -1, 1);
 
-    if (now - lastSentAtRef.current < SEND_INTERVAL_MS) {
+    if (now - lastSentAtRef.current < POINTER_SEND_INTERVAL_MS) {
       return;
     }
     lastSentAtRef.current = now;
@@ -205,32 +337,21 @@ export function PointerControl({
     void sendPointer(dx, dy);
   }
 
-  function processGestureMove(element: HTMLElement) {
-    if (!gestureActiveRef.current) {
-      return;
-    }
-
+  function processGestureMove(
+    element: HTMLElement,
+    gestureState: 'Pinch' | 'Pan',
+  ) {
     const state = getGestureState();
     if (!state) {
-      endGesture();
-      return;
-    }
-
-    const startCenter = gestureStartCenterRef.current;
-    const startDistance = gestureStartDistanceRef.current;
-    if (!startCenter || startDistance === null || startDistance <= 0) {
-      endGesture();
+      transitionTo('Wait');
       return;
     }
 
     const now = performance.now();
-    if (now - lastGestureSentAtRef.current < SEND_INTERVAL_MS) {
+    if (now - lastGestureSentAtRef.current < GESTURE_SEND_INTERVAL_MS) {
       return;
     }
 
-    const rect = element.getBoundingClientRect();
-    const width = rect.width || 1;
-    const height = rect.height || 1;
     const previousCenter = lastGestureCenterRef.current;
     const previousDistance = lastGestureDistanceRef.current;
     if (!previousCenter || previousDistance === null || previousDistance <= 0) {
@@ -239,47 +360,9 @@ export function PointerControl({
       return;
     }
 
-    let gestureDirection: 'pan' | 'pinch' | null = null;
-    const lastGesturePointers = lastGesturePointersRef.current;
-    if (lastGesturePointers && lastGesturePointers.size >= 2) {
-      const entries = Array.from(activePointersRef.current.entries()).slice(
-        0,
-        2,
-      );
-      if (entries.length === 2) {
-        const [idA, currentA] = entries[0];
-        const [idB, currentB] = entries[1];
-        const previousA = lastGesturePointers.get(idA);
-        const previousB = lastGesturePointers.get(idB);
-
-        if (previousA && previousB) {
-          const moveAx = currentA.x - previousA.x;
-          const moveAy = currentA.y - previousA.y;
-          const moveBx = currentB.x - previousB.x;
-          const moveBy = currentB.y - previousB.y;
-          const moveALen = Math.hypot(moveAx, moveAy);
-          const moveBLen = Math.hypot(moveBx, moveBy);
-          if (moveALen > 0.0001 && moveBLen > 0.0001) {
-            const cosine =
-              (moveAx * moveBx + moveAy * moveBy) / (moveALen * moveBLen);
-
-            if (cosine <= -0.45) {
-              gestureDirection = 'pinch';
-            } else if (cosine >= 0.45) {
-              gestureDirection = 'pan';
-            }
-          }
-        }
-      }
-    }
-
-    if (gestureModeRef.current === null) {
-      if (gestureDirection === null) {
-        return;
-      }
-      gestureModeRef.current = gestureDirection;
-    }
-
+    const rect = element.getBoundingClientRect();
+    const width = rect.width || 1;
+    const height = rect.height || 1;
     const scaleMultiplier = state.distance / previousDistance;
     const offsetDeltaX = clamp(
       ((state.centerX - previousCenter.x) / width) *
@@ -298,12 +381,9 @@ export function PointerControl({
 
     lastGestureCenterRef.current = {x: state.centerX, y: state.centerY};
     lastGestureDistanceRef.current = state.distance;
-    lastGesturePointersRef.current = new Map(
-      Array.from(activePointersRef.current.entries()).slice(0, 2),
-    );
     lastGestureSentAtRef.current = now;
 
-    if (gestureModeRef.current === 'pinch') {
+    if (gestureState === 'Pinch') {
       void sendViewerTransform(scaleMultiplier, 0, 0);
       return;
     }
@@ -311,110 +391,176 @@ export function PointerControl({
     void sendViewerTransform(1, offsetDeltaX, offsetDeltaY);
   }
 
+  function handlePointerDown(pointerId: number, point: Point) {
+    activePointersRef.current.set(pointerId, point);
+
+    if (
+      stateRef.current === 'Idle' &&
+      activePointersRef.current.size === 1
+    ) {
+      beginDown(pointerId, point);
+      return;
+    }
+
+    if (stateRef.current === 'Idle') {
+      transitionTo('Wait');
+      return;
+    }
+
+    if (stateRef.current === 'Down' && activePointersRef.current.size === 2) {
+      beginDoubleDown();
+      return;
+    }
+
+    if (stateRef.current === 'FirstTap') {
+      const action = firstTapActionRef.current;
+      if (!action) {
+        transitionTo('Wait');
+        return;
+      }
+
+      transitionTo('PageMoved');
+      firstTapActionRef.current = null;
+      void onSlide(action);
+    }
+  }
+
+  function handlePointerMove(
+    pointerId: number,
+    point: Point,
+    element: HTMLElement,
+  ) {
+    if (!activePointersRef.current.has(pointerId)) {
+      return;
+    }
+    activePointersRef.current.set(pointerId, point);
+
+    if (
+      stateRef.current === 'Down' &&
+      pointerId === primaryPointerIdRef.current
+    ) {
+      const startPoint = downStartPointRef.current;
+      if (
+        startPoint &&
+        Math.hypot(point.x - startPoint.x, point.y - startPoint.y) >=
+          DRAG_START_DISTANCE_PX
+      ) {
+        beginDrag(point);
+      }
+      return;
+    }
+
+    if (
+      stateRef.current === 'Drag' &&
+      pointerId === primaryPointerIdRef.current
+    ) {
+      processPointerMove(point.x, point.y);
+      return;
+    }
+
+    if (stateRef.current === 'DoubleDown') {
+      const gestureState = classifyDoubleDown();
+      if (gestureState) {
+        transitionTo(gestureState);
+        processGestureMove(element, gestureState);
+      }
+      return;
+    }
+
+    if (stateRef.current === 'Pinch' || stateRef.current === 'Pan') {
+      processGestureMove(element, stateRef.current);
+    }
+  }
+
+  function handlePointerEnd(pointerId: number) {
+    const endingState = stateRef.current;
+    activePointersRef.current.delete(pointerId);
+
+    if (endingState === 'Down' && pointerId === primaryPointerIdRef.current) {
+      endPointerMotion();
+      primaryPointerIdRef.current = null;
+      beginFirstTap('next');
+      return;
+    }
+
+    if (endingState === 'Hold' && pointerId === primaryPointerIdRef.current) {
+      endPointerMotion();
+      primaryPointerIdRef.current = null;
+      beginFirstTap('prev');
+      return;
+    }
+
+    if (endingState === 'Drag') {
+      transitionTo('Idle');
+      return;
+    }
+
+    if (endingState === 'PageMoved') {
+      transitionTo(
+        activePointersRef.current.size === 0 ? 'Idle' : 'Wait',
+      );
+      return;
+    }
+
+    if (
+      endingState === 'DoubleDown' ||
+      endingState === 'Pinch' ||
+      endingState === 'Pan'
+    ) {
+      transitionTo('Wait');
+      if (activePointersRef.current.size === 0) {
+        transitionTo('Idle');
+      }
+      return;
+    }
+
+    if (endingState === 'Wait' && activePointersRef.current.size === 0) {
+      transitionTo('Idle');
+    }
+  }
+
+  function handlePointerCancel(pointerId: number) {
+    activePointersRef.current.delete(pointerId);
+    transitionTo('Wait');
+    if (activePointersRef.current.size === 0) {
+      transitionTo('Idle');
+    }
+  }
+
   return (
     <div
       className={styles.trackpad}
       onPointerDown={event => {
         event.currentTarget.setPointerCapture(event.pointerId);
-        activePointersRef.current.set(event.pointerId, {
+        handlePointerDown(event.pointerId, {
           x: event.clientX,
           y: event.clientY,
         });
-
-        if (activePointersRef.current.size === 1) {
-          if (gestureActiveRef.current) {
-            endGesture();
-          }
-          activePointerIdRef.current = event.pointerId;
-          beginPointer(event.clientX, event.clientY);
-          return;
-        }
-
-        if (activePointersRef.current.size === 2) {
-          beginGestureFromCurrentPointers();
-        }
       }}
       onPointerMove={event => {
         if (!activePointersRef.current.has(event.pointerId)) {
           return;
         }
-
-        activePointersRef.current.set(event.pointerId, {
-          x: event.clientX,
-          y: event.clientY,
-        });
-
-        if (activePointersRef.current.size >= 2) {
-          if (!gestureActiveRef.current) {
-            beginGestureFromCurrentPointers();
-          }
-          event.preventDefault();
-          processGestureMove(event.currentTarget);
-          return;
-        }
-
-        if (gestureActiveRef.current) {
-          gestureActiveRef.current = false;
-          syncSinglePointerFromActivePointers();
-        }
-
-        if (event.pointerId !== activePointerIdRef.current) {
-          return;
-        }
-
         event.preventDefault();
-        processMove(event.clientX, event.clientY);
+        handlePointerMove(
+          event.pointerId,
+          {x: event.clientX, y: event.clientY},
+          event.currentTarget,
+        );
       }}
       onPointerUp={event => {
-        activePointersRef.current.delete(event.pointerId);
-
-        if (activePointersRef.current.size >= 2) {
-          const state = getGestureState();
-          if (state) {
-            lastGestureCenterRef.current = {
-              x: state.centerX,
-              y: state.centerY,
-            };
-            lastGestureDistanceRef.current = state.distance;
-          }
-          return;
-        }
-
-        if (activePointersRef.current.size === 1) {
-          endGesture();
-          syncSinglePointerFromActivePointers();
-          return;
-        }
-
-        if (event.pointerId === activePointerIdRef.current) {
-          endPointer();
-        }
-        endGesture();
+        handlePointerEnd(event.pointerId);
       }}
       onPointerCancel={event => {
-        activePointersRef.current.delete(event.pointerId);
-
-        if (activePointersRef.current.size === 1) {
-          endGesture();
-          syncSinglePointerFromActivePointers();
-        } else if (activePointersRef.current.size === 0) {
-          endPointer();
-        }
-        endGesture();
+        handlePointerCancel(event.pointerId);
       }}
       onPointerLeave={event => {
-        if (event.buttons !== 0) {
-          return;
+        if (
+          event.buttons === 0 &&
+          activePointersRef.current.has(event.pointerId)
+        ) {
+          handlePointerEnd(event.pointerId);
         }
-
-        activePointersRef.current.delete(event.pointerId);
-        if (activePointersRef.current.size === 1) {
-          endGesture();
-          syncSinglePointerFromActivePointers();
-        } else if (activePointersRef.current.size === 0) {
-          endPointer();
-        }
-        endGesture();
       }}
     />
   );
