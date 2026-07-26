@@ -1,11 +1,13 @@
 'use client';
 
 export type SvgPageData = {
-  markup: string;
+  markup: string | null;
+  domTemplate: SVGSVGElement | null;
   width: number;
   height: number;
 };
 
+const DOM_CACHE_PARSE_THRESHOLD_MS = 8;
 const cache = new Map<string, Promise<SvgPageData>>();
 const resolvedCache = new Map<string, SvgPageData>();
 
@@ -34,10 +36,12 @@ export function getSvgPage(baseUrl: string, page: number) {
         throw new Error('SVG page not found');
       }
       const markup = await response.text();
+      const parseStartedAt = performance.now();
       const documentNode = new DOMParser().parseFromString(
         markup,
         'image/svg+xml',
       );
+      const parseDurationMs = performance.now() - parseStartedAt;
       const svg = documentNode.documentElement;
       const viewBox = svg
         .getAttribute('viewBox')
@@ -54,7 +58,11 @@ export function getSvgPage(baseUrl: string, page: number) {
           : parseLength(svg.getAttribute('height'));
 
       const result = {
-        markup,
+        markup: parseDurationMs >= DOM_CACHE_PARSE_THRESHOLD_MS ? null : markup,
+        domTemplate:
+          parseDurationMs >= DOM_CACHE_PARSE_THRESHOLD_MS
+            ? (document.importNode(svg, true) as unknown as SVGSVGElement)
+            : null,
         width: width || 1,
         height: height || 1,
       };

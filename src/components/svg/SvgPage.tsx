@@ -3,7 +3,13 @@
 import type {CSSProperties} from 'react';
 import {useEffect, useState} from 'react';
 import {ChevronLeft, ChevronRight} from 'lucide-react';
-import {getCachedSvgPage, getSvgPage, preloadSvgPages} from './svg-page';
+import {
+  getCachedSvgPage,
+  getSvgPage,
+  preloadSvgPages,
+  type SvgPageData,
+} from './svg-page';
+import {SvgContent} from './SvgContent';
 import * as styles from './svg-page.css';
 
 type Props = {
@@ -32,13 +38,13 @@ export function SvgPage({
   const requestKey = `${baseUrl}:${page}`;
   const [result, setResult] = useState<{
     key: string;
-    markup: string;
+    page: SvgPageData | null;
     error: string | null;
-  }>({key: '', markup: '', error: null});
+  }>({key: '', page: null, error: null});
   const canNavigate = Boolean(onPrevPage || onNextPage);
   const cachedPage = getCachedSvgPage(baseUrl, page);
-  const markup =
-    cachedPage?.markup ?? (result.key === requestKey ? result.markup : '');
+  const pageData =
+    cachedPage ?? (result.key === requestKey ? result.page : null);
   const error = result.key === requestKey ? result.error : null;
 
   useEffect(() => {
@@ -54,14 +60,14 @@ export function SvgPage({
         if (disposed) {
           return;
         }
-        setResult({key: requestKey, markup: result.markup, error: null});
+        setResult({key: requestKey, page: result, error: null});
         onViewportChange?.({width: result.width, height: result.height});
       })
       .catch(() => {
         if (!disposed) {
           setResult({
             key: requestKey,
-            markup: '',
+            page: null,
             error: 'SVGスライドを表示できませんでした',
           });
         }
@@ -106,13 +112,8 @@ export function SvgPage({
       } ${className ?? ''}`.trim()}
       style={style}
     >
-      {markup ? (
-        <div
-          className={styles.svg}
-          dangerouslySetInnerHTML={{__html: markup}}
-        />
-      ) : null}
-      {!markup && !error ? (
+      {pageData ? <SvgContent page={pageData} className={styles.svg} /> : null}
+      {!pageData && !error ? (
         <div className={styles.status}>Loading SVG page...</div>
       ) : null}
       {error ? <div className={styles.status}>{error}</div> : null}

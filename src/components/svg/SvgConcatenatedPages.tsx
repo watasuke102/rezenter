@@ -2,6 +2,7 @@
 
 import {useEffect, useMemo, useState, type CSSProperties} from 'react';
 import {getSvgPage, type SvgPageData} from './svg-page';
+import {SvgContent} from './SvgContent';
 import * as styles from './svg-page.css';
 
 type Props = {
@@ -125,7 +126,8 @@ export function SvgConcatenatedPages({
               aspectRatio: `${croppedWidth} / ${croppedHeight}`,
             }}
           >
-            <div
+            <SvgContent
+              page={page}
               className={styles.croppedSvg}
               style={{
                 left: `${(-marginLeft / croppedWidth) * 100}%`,
@@ -133,7 +135,6 @@ export function SvgConcatenatedPages({
                 width: `${renderedWidthPercent}%`,
                 height: `${(page.height / croppedHeight) * 100}%`,
               }}
-              dangerouslySetInnerHTML={{__html: page.markup}}
             />
           </div>
         );
