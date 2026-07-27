@@ -15,7 +15,7 @@ export async function GET(_: Request, {params}: Params) {
 
   if (session.sourceType === 'url' && session.pdfUrl) {
     try {
-      const response = await fetch(session.pdfUrl);
+      const response = await fetch(session.pdfUrl, {cache: 'no-store'});
       if (!response.ok) {
         return NextResponse.json(
           {error: 'Failed to fetch source PDF'},

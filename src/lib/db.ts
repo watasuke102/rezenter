@@ -20,6 +20,7 @@ function initSchema(db: Database.Database) {
       typst_path TEXT,
       svg_dir TEXT,
       created_at INTEGER NOT NULL,
+      slides_updated_at INTEGER NOT NULL,
       current_page INTEGER NOT NULL DEFAULT 0,
       total_pages INTEGER,
       timer_elapsed_ms INTEGER NOT NULL DEFAULT 0,
@@ -100,6 +101,16 @@ function initSchema(db: Database.Database) {
 
   if (!columns.has('svg_dir')) {
     db.prepare(`ALTER TABLE sessions ADD COLUMN svg_dir TEXT`).run();
+  }
+
+  if (!columns.has('slides_updated_at')) {
+    db.prepare(
+      `ALTER TABLE sessions ADD COLUMN slides_updated_at INTEGER NOT NULL DEFAULT 0`,
+    ).run();
+    db.prepare(
+      `UPDATE sessions SET slides_updated_at = created_at
+       WHERE slides_updated_at = 0`,
+    ).run();
   }
 }
 

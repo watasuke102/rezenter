@@ -14,6 +14,7 @@ type Props = {
 export function SessionList({sessions}: Props) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [reloadingId, setReloadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function onDelete(sessionId: string) {
@@ -39,6 +40,27 @@ export function SessionList({sessions}: Props) {
       setError('削除中に通信エラーが発生しました');
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function onReload(sessionId: string) {
+    setError(null);
+    setReloadingId(sessionId);
+
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/reload`, {
+        method: 'POST',
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setError(payload.error ?? 'スライドの更新に失敗しました');
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError('スライドの更新中に通信エラーが発生しました');
+    } finally {
+      setReloadingId(null);
     }
   }
 
@@ -98,6 +120,14 @@ export function SessionList({sessions}: Props) {
                 onClick={() => setSettingsSessionId(session.id)}
               >
                 表示設定
+              </button>
+              <button
+                type='button'
+                className={styles.pageLink}
+                disabled={reloadingId === session.id}
+                onClick={() => onReload(session.id)}
+              >
+                {reloadingId === session.id ? 'リロード中...' : 'リロード'}
               </button>
             </div>
             <button

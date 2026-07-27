@@ -21,6 +21,11 @@ export type PageChangeOptions = {
   resetScale?: boolean;
 };
 
+export type SlideReloadInput = {
+  totalPages: number;
+  svgDir?: string;
+};
+
 export interface SessionRepository {
   list(): SessionSummary[];
   create(input: CreateSessionInput): SessionRecord;
@@ -50,6 +55,10 @@ export interface SessionRepository {
     sessionId: string,
     settings: NonNullable<SessionRecord['viewerSettings']>,
   ): boolean;
+  updateSlides(
+    sessionId: string,
+    input: SlideReloadInput,
+  ): SessionRecord | null;
   updatePointer(sessionId: string, x: number, y: number): SessionRecord | null;
   updateViewerTransform(
     sessionId: string,

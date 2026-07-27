@@ -13,6 +13,7 @@ import type {
   CreateSessionInput,
   PageChangeOptions,
   SessionRepository,
+  SlideReloadInput,
 } from '@/lib/repository/session-repository';
 
 type SessionRow = {
@@ -24,6 +25,7 @@ type SessionRow = {
   typst_path: string | null;
   svg_dir: string | null;
   created_at: number;
+  slides_updated_at: number;
   current_page: number;
   total_pages: number | null;
   timer_elapsed_ms: number;
@@ -63,6 +65,7 @@ function mapSession(row: SessionRow): SessionRecord {
     typstPath: row.typst_path,
     svgDir: row.svg_dir,
     createdAt: row.created_at,
+    slidesUpdatedAt: row.slides_updated_at,
     currentPage: row.current_page,
     totalPages: row.total_pages,
     timerElapsedMs: row.timer_elapsed_ms,
@@ -132,12 +135,12 @@ export class SqliteSessionRepository implements SessionRepository {
       .prepare(
         `INSERT INTO sessions (
           id, title, source_type, pdf_path, pdf_url, typst_path, svg_dir,
-          created_at, total_pages,
+          created_at, slides_updated_at, total_pages,
           viewer_scale, viewer_offset_x, viewer_offset_y,
           disable_scale_reset_on_page_change, viewer_settings
         ) VALUES (
           @id, @title, @sourceType, @pdfPath, @pdfUrl, @typstPath, @svgDir,
-          @createdAt, @totalPages,
+          @createdAt, @slidesUpdatedAt, @totalPages,
           @viewerScale, @viewerOffsetX, @viewerOffsetY, @disableScaleReset, @viewerSettings
         )`,
       )
@@ -150,6 +153,7 @@ export class SqliteSessionRepository implements SessionRepository {
         typstPath: input.typstPath ?? null,
         svgDir: input.svgDir ?? null,
         createdAt,
+        slidesUpdatedAt: createdAt,
         totalPages: input.totalPages ?? null,
         viewerScale: 1,
         viewerOffsetX: 0,
@@ -329,6 +333,43 @@ export class SqliteSessionRepository implements SessionRepository {
       )
       .run({sessionId, settings: JSON.stringify(settings)});
     return result.changes > 0;
+  }
+
+  updateSlides(
+    sessionId: string,
+    input: SlideReloadInput,
+  ): SessionRecord | null {
+    const current = this.db
+      .prepare(`SELECT slides_updated_at FROM sessions WHERE id = ?`)
+      .get(sessionId) as Pick<SessionRow, 'slides_updated_at'> | undefined;
+    if (!current) {
+      return null;
+    }
+
+    const totalPages = Math.max(1, Math.floor(input.totalPages));
+    const slidesUpdatedAt = Math.max(Date.now(), current.slides_updated_at + 1);
+    this.db
+      .prepare(
+        input.svgDir
+          ? `UPDATE sessions
+             SET svg_dir = @svgDir,
+                 total_pages = @totalPages,
+                 current_page = MIN(current_page, @totalPages - 1),
+                 slides_updated_at = @slidesUpdatedAt
+             WHERE id = @sessionId`
+          : `UPDATE sessions
+             SET total_pages = @totalPages,
+                 current_page = MIN(current_page, @totalPages - 1),
+                 slides_updated_at = @slidesUpdatedAt
+             WHERE id = @sessionId`,
+      )
+      .run({
+        sessionId,
+        totalPages,
+        slidesUpdatedAt,
+        ...(input.svgDir ? {svgDir: input.svgDir} : {}),
+      });
+    return this.fetchSession(sessionId);
   }
 
   updatePointer(sessionId: string, x: number, y: number): SessionRecord | null {

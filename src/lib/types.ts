@@ -26,6 +26,7 @@ export type SessionRecord = {
   typstPath: string | null;
   svgDir: string | null;
   createdAt: number;
+  slidesUpdatedAt: number;
   currentPage: number;
   totalPages: number | null;
   timerElapsedMs: number;

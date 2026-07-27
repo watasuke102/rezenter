@@ -1,10 +1,11 @@
 import type {SessionWithNotes} from '@/lib/types';
 
 export function toClientSession(session: SessionWithNotes) {
+  const revision = encodeURIComponent(session.slidesUpdatedAt);
   const pdfSrc =
-    session.sourceType === 'upload'
-      ? `/api/sessions/${session.id}/pdf`
-      : session.pdfUrl;
+    session.sourceType === 'typst'
+      ? null
+      : `/api/sessions/${session.id}/pdf?revision=${revision}`;
 
   return {
     ...session,
@@ -13,7 +14,7 @@ export function toClientSession(session: SessionWithNotes) {
       session.sourceType === 'typst' ? ('svg' as const) : ('pdf' as const),
     svgPageBaseUrl:
       session.sourceType === 'typst'
-        ? `/api/sessions/${session.id}/slides`
+        ? `/api/sessions/${session.id}/slides?revision=${revision}`
         : null,
   };
 }

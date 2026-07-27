@@ -20,7 +20,10 @@ function parseLength(value: string | null) {
 }
 
 export function getSvgPageUrl(baseUrl: string, page: number) {
-  return `${baseUrl}/${Math.max(0, page)}`;
+  const queryIndex = baseUrl.indexOf('?');
+  const path = queryIndex === -1 ? baseUrl : baseUrl.slice(0, queryIndex);
+  const query = queryIndex === -1 ? '' : baseUrl.slice(queryIndex);
+  return `${path}/${Math.max(0, page)}${query}`;
 }
 
 export function getSvgPage(baseUrl: string, page: number) {
