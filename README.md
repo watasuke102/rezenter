@@ -6,12 +6,14 @@ usage: `npm i`, `npm run build`, then `npm start`.
 
 ## Controller
 
-Press `Pointer Mode` to switch to pointer mode.
+A green area accepts following gestures:
 
 - slide by single finger: move the pointer
 - slide by two fingers: move slide
   - move two fingers in the same direction
 - pinch by two fingers: zoom in/out the slide
+- double-tap: next slide
+- long press (phone vibrates), leave, and quickly tap: previous slide
 
 Use the slider at the top of the screen to adjust the pointer speed.
 
