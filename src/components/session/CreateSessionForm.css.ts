@@ -73,6 +73,7 @@ export const fileInput = style([
 ]);
 
 export const button = style({
+  minHeight: 44,
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
