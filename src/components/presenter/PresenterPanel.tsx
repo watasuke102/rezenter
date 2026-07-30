@@ -1,5 +1,6 @@
 'use client';
 
+import {useEffect, useRef, useState} from 'react';
 import {ChevronLeft, ChevronRight, Pause, Play, RotateCcw} from 'lucide-react';
 import {SlidePage, type SlideSource} from '@/components/slides/SlidePage';
 import {NoteImportForm} from '@/components/session/NoteImportForm';
@@ -15,6 +16,9 @@ type Props = {
   timerText: string;
   timerRunning: boolean;
   noteText: string;
+  pointerX: number;
+  pointerY: number;
+  pointerVisible: boolean;
   onPrev: () => void;
   onNext: () => void;
   onStartPause: () => void;
@@ -31,22 +35,104 @@ export function PresenterPanel({
   timerText,
   timerRunning,
   noteText,
+  pointerX,
+  pointerY,
+  pointerVisible,
   onPrev,
   onNext,
   onStartPause,
   onResetTimer,
 }: Props) {
+  const currentPreviewRef = useRef<HTMLDivElement | null>(null);
+  const [currentPreviewSize, setCurrentPreviewSize] = useState({
+    width: 0,
+    height: 0,
+  });
+  const [currentSlideViewport, setCurrentSlideViewport] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const preview = currentPreviewRef.current;
+    if (!preview) {
+      return;
+    }
+
+    const observer = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+      setCurrentPreviewSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    });
+    observer.observe(preview);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const currentSlideRect = (() => {
+    if (
+      !currentSlideViewport ||
+      currentPreviewSize.width === 0 ||
+      currentPreviewSize.height === 0
+    ) {
+      return null;
+    }
+
+    const slideAspect =
+      currentSlideViewport.width / currentSlideViewport.height;
+    const previewAspect = currentPreviewSize.width / currentPreviewSize.height;
+    const width =
+      previewAspect > slideAspect
+        ? currentPreviewSize.height * slideAspect
+        : currentPreviewSize.width;
+    const height =
+      previewAspect > slideAspect
+        ? currentPreviewSize.height
+        : currentPreviewSize.width / slideAspect;
+
+    return {
+      left: (currentPreviewSize.width - width) / 2,
+      top: (currentPreviewSize.height - height) / 2,
+      width,
+      height,
+    };
+  })();
+
   return (
     <main className={styles.page}>
       <section className={styles.left}>
         <div className={styles.previewSection}>
           <h2 className={styles.sectionTitle}>Current</h2>
-          <SlidePage
-            source={slideSource}
-            page={currentPage}
-            totalPages={totalPages ?? undefined}
-            className={styles.currentPreview}
-          />
+          <div ref={currentPreviewRef} className={styles.currentPreviewFrame}>
+            <SlidePage
+              source={slideSource}
+              page={currentPage}
+              totalPages={totalPages ?? undefined}
+              className={styles.currentPreview}
+              onViewportChange={setCurrentSlideViewport}
+            />
+            <div
+              className={styles.pointer}
+              style={{
+                left: `${
+                  (currentSlideRect?.left ?? currentPreviewSize.width / 2) +
+                  ((pointerX + 1) / 2) * (currentSlideRect?.width ?? 0)
+                }px`,
+                top: `${
+                  (currentSlideRect?.top ?? currentPreviewSize.height / 2) +
+                  ((pointerY + 1) / 2) * (currentSlideRect?.height ?? 0)
+                }px`,
+                opacity: pointerVisible && currentSlideRect ? 1 : 0,
+              }}
+            />
+          </div>
         </div>
         <div className={styles.pageNav}>
           <button

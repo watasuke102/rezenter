@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {PresenterPanel} from '@/components/presenter/PresenterPanel';
 import {getClientSlideSource, type ClientSession} from '@/lib/client-types';
 
@@ -85,13 +85,63 @@ export function PresenterScreen({sessionId}: Props) {
     return found?.note ?? '';
   }, [session]);
 
-  async function slide(action: 'next' | 'prev') {
-    await fetch(`/api/sessions/${sessionId}/slide`, {
-      method: 'POST',
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify({action}),
-    });
-  }
+  const slide = useCallback(
+    async (action: 'next' | 'prev') => {
+      await fetch(`/api/sessions/${sessionId}/slide`, {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({action}),
+      });
+    },
+    [sessionId],
+  );
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName.toLowerCase();
+      if (
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+        return;
+      }
+
+      event.preventDefault();
+      void slide(event.key === 'ArrowLeft' ? 'prev' : 'next');
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [slide]);
+
+  useEffect(() => {
+    const pointerUpdatedAt = session?.pointerUpdatedAt;
+    if (pointerUpdatedAt === null || pointerUpdatedAt === undefined) {
+      return;
+    }
+
+    const remainingMs = 2000 - Math.max(0, Date.now() - pointerUpdatedAt);
+    if (remainingMs <= 0) {
+      return;
+    }
+
+    const id = window.setTimeout(() => {
+      setNowMs(pointerUpdatedAt + 2001);
+    }, remainingMs);
+
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [session?.pointerUpdatedAt]);
 
   async function timer(action: 'start' | 'pause' | 'reset') {
     await fetch(`/api/sessions/${sessionId}/timer`, {
@@ -120,6 +170,12 @@ export function PresenterScreen({sessionId}: Props) {
       timerText={formatMs(elapsedMs)}
       timerRunning={session.timerRunning}
       noteText={currentNote}
+      pointerX={session.pointerX}
+      pointerY={session.pointerY}
+      pointerVisible={
+        session.pointerUpdatedAt !== null &&
+        Math.max(0, nowMs - session.pointerUpdatedAt) < 2000
+      }
       onPrev={() => slide('prev')}
       onNext={() => slide('next')}
       onStartPause={() => timer(session.timerRunning ? 'pause' : 'start')}
