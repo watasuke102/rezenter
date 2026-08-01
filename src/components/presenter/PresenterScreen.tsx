@@ -2,7 +2,9 @@
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {PresenterPanel} from '@/components/presenter/PresenterPanel';
+import {PageNumberNavigationModal} from '@/components/session/PageNumberNavigationModal';
 import {getClientSlideSource, type ClientSession} from '@/lib/client-types';
+import {usePageNumberNavigation} from '@/lib/usePageNumberNavigation';
 
 type Props = {
   sessionId: string;
@@ -22,6 +24,11 @@ export function PresenterScreen({sessionId}: Props) {
     Date.now(),
   );
   const [nowMs, setNowMs] = useState(() => Date.now());
+
+  const pageNumberInput = usePageNumberNavigation({
+    sessionId,
+    totalPages: session?.totalPages,
+  });
 
   useEffect(() => {
     const source = new EventSource(`/api/sessions/${sessionId}/events`);
@@ -160,26 +167,29 @@ export function PresenterScreen({sessionId}: Props) {
   const totalPagesText = `${session.currentPage + 1}/${totalPages ?? '?'}`;
 
   return (
-    <PresenterPanel
-      sessionId={sessionId}
-      slideSource={slideSource}
-      currentPage={session.currentPage}
-      nextPage={session.currentPage + 1}
-      totalPages={totalPages}
-      totalPagesText={totalPagesText}
-      timerText={formatMs(elapsedMs)}
-      timerRunning={session.timerRunning}
-      noteText={currentNote}
-      pointerX={session.pointerX}
-      pointerY={session.pointerY}
-      pointerVisible={
-        session.pointerUpdatedAt !== null &&
-        Math.max(0, nowMs - session.pointerUpdatedAt) < 2000
-      }
-      onPrev={() => slide('prev')}
-      onNext={() => slide('next')}
-      onStartPause={() => timer(session.timerRunning ? 'pause' : 'start')}
-      onResetTimer={() => timer('reset')}
-    />
+    <>
+      <PresenterPanel
+        sessionId={sessionId}
+        slideSource={slideSource}
+        currentPage={session.currentPage}
+        nextPage={session.currentPage + 1}
+        totalPages={totalPages}
+        totalPagesText={totalPagesText}
+        timerText={formatMs(elapsedMs)}
+        timerRunning={session.timerRunning}
+        noteText={currentNote}
+        pointerX={session.pointerX}
+        pointerY={session.pointerY}
+        pointerVisible={
+          session.pointerUpdatedAt !== null &&
+          Math.max(0, nowMs - session.pointerUpdatedAt) < 2000
+        }
+        onPrev={() => slide('prev')}
+        onNext={() => slide('next')}
+        onStartPause={() => timer(session.timerRunning ? 'pause' : 'start')}
+        onResetTimer={() => timer('reset')}
+      />
+      <PageNumberNavigationModal pageNumberInput={pageNumberInput} />
+    </>
   );
 }

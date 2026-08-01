@@ -2,10 +2,12 @@
 
 import {useEffect, useRef, useState} from 'react';
 import {PdfConcatenatedCanvas} from '@/components/pdf/PdfConcatenatedCanvas';
+import {PageNumberNavigationModal} from '@/components/session/PageNumberNavigationModal';
 import {SlidePage} from '@/components/slides/SlidePage';
 import {SvgConcatenatedPages} from '@/components/svg/SvgConcatenatedPages';
 import {getClientSlideSource, type ClientSession} from '@/lib/client-types';
 import * as styles from '@/components/viewer/viewer.css';
+import {usePageNumberNavigation} from '@/lib/usePageNumberNavigation';
 import {useViewerSettings} from '@/lib/useViewerSettings';
 
 type Props = {
@@ -28,6 +30,11 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     width: number;
     height: number;
   } | null>(null);
+
+  const pageNumberInput = usePageNumberNavigation({
+    sessionId,
+    totalPages: session?.totalPages,
+  });
 
   async function moveSlide(action: 'next' | 'prev') {
     try {
@@ -247,6 +254,7 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
             opacity: isPointerVisible ? 1 : 0,
           }}
         />
+        <PageNumberNavigationModal pageNumberInput={pageNumberInput} />
       </main>
     );
   }
@@ -272,6 +280,7 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
           opacity: isPointerVisible ? 1 : 0,
         }}
       />
+      <PageNumberNavigationModal pageNumberInput={pageNumberInput} />
     </main>
   );
 }
