@@ -1,4 +1,9 @@
 import {ControllerScreen} from '@/components/controller/ControllerScreen';
+import type {Metadata} from 'next';
+
+export const metadata: Metadata = {
+  title: 'Controller',
+};
 
 type Props = {
   params: Promise<{id: string}>;
