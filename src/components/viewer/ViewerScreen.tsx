@@ -4,6 +4,7 @@ import {useEffect, useRef, useState} from 'react';
 import {PdfConcatenatedCanvas} from '@/components/pdf/PdfConcatenatedCanvas';
 import {PageNumberNavigationModal} from '@/components/session/PageNumberNavigationModal';
 import {SlidePage} from '@/components/slides/SlidePage';
+import {PageGridModal} from '@/components/slides/PageGridModal';
 import {SvgConcatenatedPages} from '@/components/svg/SvgConcatenatedPages';
 import {getClientSlideSource, type ClientSession} from '@/lib/client-types';
 import * as styles from '@/components/viewer/viewer.css';
@@ -36,12 +37,12 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     totalPages: session?.totalPages,
   });
 
-  async function moveSlide(action: 'next' | 'prev') {
+  async function moveSlide(action: 'next' | 'prev' | 'set', page?: number) {
     try {
       await fetch(`/api/sessions/${sessionId}/slide`, {
         method: 'POST',
         headers: {'content-type': 'application/json'},
-        body: JSON.stringify({action}),
+        body: JSON.stringify({action, page}),
       });
     } catch {
       // ignore transient movement request failures
@@ -215,6 +216,15 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     session.pointerUpdatedAt !== null &&
     Math.max(0, nowMs - session.pointerUpdatedAt) < 2000;
 
+  const pageGrid = (
+    <PageGridModal
+      source={slideSource}
+      currentPage={session.currentPage}
+      totalPages={session.totalPages ?? 1}
+      onSelectPage={page => moveSlide('set', page)}
+    />
+  );
+
   if (!isLoaded) {
     return null;
   }
@@ -255,6 +265,7 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
           }}
         />
         <PageNumberNavigationModal pageNumberInput={pageNumberInput} />
+        {pageGrid}
       </main>
     );
   }
@@ -281,6 +292,7 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
         }}
       />
       <PageNumberNavigationModal pageNumberInput={pageNumberInput} />
+      {pageGrid}
     </main>
   );
 }

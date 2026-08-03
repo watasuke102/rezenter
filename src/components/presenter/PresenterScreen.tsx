@@ -3,6 +3,7 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {PresenterPanel} from '@/components/presenter/PresenterPanel';
 import {PageNumberNavigationModal} from '@/components/session/PageNumberNavigationModal';
+import {PageGridModal} from '@/components/slides/PageGridModal';
 import {getClientSlideSource, type ClientSession} from '@/lib/client-types';
 import {usePageNumberNavigation} from '@/lib/usePageNumberNavigation';
 
@@ -93,11 +94,11 @@ export function PresenterScreen({sessionId}: Props) {
   }, [session]);
 
   const slide = useCallback(
-    async (action: 'next' | 'prev') => {
+    async (action: 'next' | 'prev' | 'set', page?: number) => {
       await fetch(`/api/sessions/${sessionId}/slide`, {
         method: 'POST',
         headers: {'content-type': 'application/json'},
-        body: JSON.stringify({action}),
+        body: JSON.stringify({action, page}),
       });
     },
     [sessionId],
@@ -190,6 +191,12 @@ export function PresenterScreen({sessionId}: Props) {
         onResetTimer={() => timer('reset')}
       />
       <PageNumberNavigationModal pageNumberInput={pageNumberInput} />
+      <PageGridModal
+        source={slideSource}
+        currentPage={session.currentPage}
+        totalPages={totalPages ?? 1}
+        onSelectPage={page => slide('set', page)}
+      />
     </>
   );
 }
