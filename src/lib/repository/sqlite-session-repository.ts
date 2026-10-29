@@ -8,6 +8,7 @@ import type {
   SessionRecord,
   SessionSummary,
   SessionWithNotes,
+  ViewerSettings,
 } from '@/lib/types';
 import type {
   CreateSessionInput,
@@ -45,6 +46,10 @@ type PageStateRow = Pick<
   SessionRow,
   'current_page' | 'total_pages' | 'disable_scale_reset_on_page_change'
 >;
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v));
+}
 
 function clampPage(page: number, totalPages: number | null): number {
   const base = Math.max(0, Math.floor(page));
@@ -402,8 +407,56 @@ export class SqliteSessionRepository implements SessionRepository {
     const safeOffsetDeltaX = Number.isFinite(offsetDeltaX) ? offsetDeltaX : 0;
     const safeOffsetDeltaY = Number.isFinite(offsetDeltaY) ? offsetDeltaY : 0;
     const nextScale = Math.max(1, row.viewer_scale * safeMultiplier);
-    const nextOffsetX = row.viewer_offset_x + safeOffsetDeltaX;
-    const nextOffsetY = row.viewer_offset_y + safeOffsetDeltaY;
+    const concatenatedMode =
+      row.viewer_settings !== null &&
+      (JSON.parse(row.viewer_settings) as Partial<ViewerSettings>)
+        .concatenatedMode === true;
+
+    // Adjust offsets so that the point under the pointer stays at the same
+    // position on screen while zooming (see ViewerScreen for offset semantics)
+    let nextOffsetX = row.viewer_offset_x;
+    let nextOffsetY = row.viewer_offset_y;
+    if (nextScale !== row.viewer_scale) {
+      const scale = row.viewer_scale;
+      const pointerX = clamp(row.pointer_x, -1, 1);
+      const pointerY = clamp(row.pointer_y, -1, 1);
+      if (concatenatedMode) {
+        const limitX = (nextScale - 1) / 2;
+        nextOffsetX = clamp(
+          nextOffsetX + (pointerX * (scale - nextScale)) / 2,
+          -limitX,
+          limitX,
+        );
+        nextOffsetY = clamp(
+          nextOffsetY + ((1 + pointerY) * (scale - nextScale)) / 2,
+          -nextScale,
+          0,
+        );
+      } else if (nextScale > 1) {
+        nextOffsetX = clamp(
+          (nextOffsetX * (scale - 1) + pointerX * (scale - nextScale)) /
+            (nextScale - 1),
+          -1,
+          1,
+        );
+        nextOffsetY = clamp(
+          (nextOffsetY * (scale - 1) + pointerY * (scale - nextScale)) /
+            (nextScale - 1),
+          -1,
+          1,
+        );
+      } else {
+        nextOffsetX = 0;
+        nextOffsetY = 0;
+      }
+    }
+
+    nextOffsetX += safeOffsetDeltaX;
+    // In concatenated mode, offsetY is in units of the whole document height;
+    // convert the pan delta (in units of the screen height) roughly per page
+    nextOffsetY += concatenatedMode
+      ? safeOffsetDeltaY / Math.max(1, row.total_pages ?? 1)
+      : safeOffsetDeltaY;
 
     if (
       nextScale === row.viewer_scale &&

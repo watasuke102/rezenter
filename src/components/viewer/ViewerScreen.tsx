@@ -164,7 +164,7 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
       );
       actualOffsetY = Math.max(
         -rangeY,
-        Math.min(rangeY, rangeY + session.viewerOffsetY * containerHeight),
+        Math.min(rangeY, rangeY + session.viewerOffsetY * baseHeight),
       );
     } else {
       const offsetX = Math.max(
@@ -175,8 +175,16 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
         -VIEWER_OFFSET_LIMIT,
         Math.min(VIEWER_OFFSET_LIMIT, session.viewerOffsetY),
       );
-      actualOffsetX = offsetX * rangeX;
-      actualOffsetY = offsetY * rangeY;
+      // offset is relative to the range when the slide fills the container,
+      // so that the server can keep the pointer position while zooming
+      actualOffsetX = Math.max(
+        -rangeX,
+        Math.min(rangeX, (offsetX * (width - baseWidth)) / 2),
+      );
+      actualOffsetY = Math.max(
+        -rangeY,
+        Math.min(rangeY, (offsetY * (height - baseHeight)) / 2),
+      );
     }
 
     const centerX = containerWidth / 2 + actualOffsetX;
