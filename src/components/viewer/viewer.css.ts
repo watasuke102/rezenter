@@ -26,3 +26,18 @@ export const pointer = style({
   pointerEvents: 'none',
   zIndex: 2,
 });
+
+export const offscreenIndicator = style({
+  position: 'absolute',
+  inset: 0,
+  pointerEvents: 'none',
+  zIndex: 3,
+  transition: 'opacity 300ms ease',
+});
+
+export const offscreenHighlight = style({
+  position: 'absolute',
+  inset: 0,
+  border: '8px solid rgba(255, 40, 20, 0.9)',
+  boxShadow: 'inset 0 0 24px rgba(255, 40, 20, 0.6)',
+});

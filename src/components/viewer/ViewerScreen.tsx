@@ -27,6 +27,10 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     width: typeof window === 'undefined' ? 1 : window.innerWidth,
     height: typeof window === 'undefined' ? 1 : window.innerHeight,
   }));
+  const [lastOffscreenPointer, setLastOffscreenPointer] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
   const [slideViewport, setSlideViewport] = useState<{
     width: number;
     height: number;
@@ -224,6 +228,58 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
     session.pointerUpdatedAt !== null &&
     Math.max(0, nowMs - session.pointerUpdatedAt) < 2000;
 
+  const isPointerOffscreen =
+    pointerRect !== null &&
+    (pointerRect.left < 0 ||
+      pointerRect.left > viewportSize.width ||
+      pointerRect.top < 0 ||
+      pointerRect.top > viewportSize.height);
+  // keep the last offscreen position so that the indicator does not jump
+  // while fading out after the pointer comes back into the screen
+  if (
+    isPointerOffscreen &&
+    (lastOffscreenPointer?.left !== pointerRect.left ||
+      lastOffscreenPointer?.top !== pointerRect.top)
+  ) {
+    setLastOffscreenPointer(pointerRect);
+  }
+
+  const offscreenIndicator = (() => {
+    if (!lastOffscreenPointer) {
+      return null;
+    }
+
+    const clamp = (value: number, min: number, max: number) =>
+      Math.max(min, Math.min(max, value));
+    const edgeX = clamp(lastOffscreenPointer.left, 0, viewportSize.width);
+    const edgeY = clamp(lastOffscreenPointer.top, 0, viewportSize.height);
+    // the farther the pointer is from the screen, the more opaque the indicator
+    const distance = Math.hypot(
+      lastOffscreenPointer.left - edgeX,
+      lastOffscreenPointer.top - edgeY,
+    );
+    const opaqueDistance =
+      Math.min(viewportSize.width, viewportSize.height) * 0.3;
+    const distanceOpacity = clamp(distance / opaqueDistance, 0.15, 1);
+    const highlightMask = `radial-gradient(circle at ${edgeX}px ${edgeY}px, #000 0, #000 4vmin, transparent 20vmin)`;
+
+    return (
+      <div
+        className={styles.offscreenIndicator}
+        style={{opacity: isPointerVisible && isPointerOffscreen ? 1 : 0}}
+      >
+        <div
+          className={styles.offscreenHighlight}
+          style={{
+            opacity: distanceOpacity,
+            maskImage: highlightMask,
+            WebkitMaskImage: highlightMask,
+          }}
+        />
+      </div>
+    );
+  })();
+
   const pageGrid = (
     <PageGridModal
       source={slideSource}
@@ -272,6 +328,7 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
             opacity: isPointerVisible ? 1 : 0,
           }}
         />
+        {offscreenIndicator}
         <PageNumberNavigationModal pageNumberInput={pageNumberInput} />
         {pageGrid}
       </main>
@@ -299,6 +356,7 @@ export function ViewerScreen({sessionId, initialSession}: Props) {
           opacity: isPointerVisible ? 1 : 0,
         }}
       />
+      {offscreenIndicator}
       <PageNumberNavigationModal pageNumberInput={pageNumberInput} />
       {pageGrid}
     </main>
