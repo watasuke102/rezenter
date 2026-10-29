@@ -451,12 +451,39 @@ export class SqliteSessionRepository implements SessionRepository {
       }
     }
 
-    nextOffsetX += safeOffsetDeltaX;
-    // In concatenated mode, offsetY is in units of the whole document height;
-    // convert the pan delta (in units of the screen height) roughly per page
-    nextOffsetY += concatenatedMode
-      ? safeOffsetDeltaY / Math.max(1, row.total_pages ?? 1)
-      : safeOffsetDeltaY;
+    let nextPointerX = row.pointer_x;
+    let nextPointerY = row.pointer_y;
+    if (concatenatedMode) {
+      // offsetY is in units of the whole document height;
+      // convert the pan delta (in units of the screen height) roughly per page
+      const pannedOffsetX = clamp(
+        nextOffsetX + safeOffsetDeltaX,
+        -(nextScale - 1) / 2,
+        (nextScale - 1) / 2,
+      );
+      const pannedOffsetY = clamp(
+        nextOffsetY + safeOffsetDeltaY / Math.max(1, row.total_pages ?? 1),
+        -nextScale,
+        0,
+      );
+      // Move the pointer in the opposite direction of the pan so that it stays
+      // at the same position relative to the screen
+      nextPointerX = clamp(
+        nextPointerX - (2 * (pannedOffsetX - nextOffsetX)) / nextScale,
+        -1,
+        1,
+      );
+      nextPointerY = clamp(
+        nextPointerY - (2 * (pannedOffsetY - nextOffsetY)) / nextScale,
+        -1,
+        1,
+      );
+      nextOffsetX = pannedOffsetX;
+      nextOffsetY = pannedOffsetY;
+    } else {
+      nextOffsetX += safeOffsetDeltaX;
+      nextOffsetY += safeOffsetDeltaY;
+    }
 
     if (
       nextScale === row.viewer_scale &&
@@ -471,7 +498,9 @@ export class SqliteSessionRepository implements SessionRepository {
         `UPDATE sessions
          SET viewer_scale = @viewerScale,
              viewer_offset_x = @viewerOffsetX,
-             viewer_offset_y = @viewerOffsetY
+             viewer_offset_y = @viewerOffsetY,
+             pointer_x = @pointerX,
+             pointer_y = @pointerY
          WHERE id = @sessionId`,
       )
       .run({
@@ -479,6 +508,8 @@ export class SqliteSessionRepository implements SessionRepository {
         viewerScale: nextScale,
         viewerOffsetX: nextOffsetX,
         viewerOffsetY: nextOffsetY,
+        pointerX: nextPointerX,
+        pointerY: nextPointerY,
       });
 
     return this.fetchSession(sessionId);
